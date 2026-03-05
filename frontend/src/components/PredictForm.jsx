@@ -13,9 +13,9 @@ const SLIDER_CONFIG = [
   { key: 'num_leads', label: 'Number of Leads', min: 1, max: 50, step: 1, default: 9, desc: 'How many drug candidates to generate.' },
 ]
 
-export default function PredictForm({ onResult, onTokensExhausted, userTokens }) {
+export default function PredictForm({ onResult, onTokensExhausted, userTokens, onClearResult }) {
   const [sequence, setSequence] = useState('')
-  const [params, setParams] = useState(() =>
+  const [params, setParams] = useState(
     Object.fromEntries(SLIDER_CONFIG.map((s) => [s.key, s.default]))
   )
   const [loading, setLoading] = useState(false)
@@ -28,6 +28,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens })
   function reset() {
     setSequence('')
     setParams(Object.fromEntries(SLIDER_CONFIG.map((s) => [s.key, s.default])))
+    onClearResult?.()
   }
 
   async function handleSubmit(e) {

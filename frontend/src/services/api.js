@@ -26,8 +26,8 @@ api.interceptors.response.use(
 )
 
 // ── Auth ──
-export const register = (email, password, consent) =>
-  api.post('/auth/register', { email, password, consent })
+export const register = (username, email, password, consent) =>
+  api.post('/auth/register', { username, email, password, consent })
 
 export const login = (email, password) =>
   api.post('/auth/login', { email, password })
@@ -62,6 +62,12 @@ export const getPredictionDetail = (id) =>
 
 export const changePassword = (current_password, new_password) =>
   api.post('/auth/change-password', { current_password, new_password })
+
+export const forgotPassword = (email) =>
+  api.post('/auth/forgot-password', { email })
+
+export const resetPassword = (email, otp, new_password) =>
+  api.post('/auth/reset-password', { email, otp, new_password })
 
 // ── Health ──
 export const healthCheck = () => api.get('/health')

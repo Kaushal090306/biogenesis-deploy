@@ -21,3 +21,21 @@ async def create_tables():
     async with engine.begin() as conn:
         from db import models  # noqa: F401
         await conn.run_sync(Base.metadata.create_all)
+        # Migrate: add columns that may not exist in older DBs
+        from sqlalchemy import text
+        for sql in [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_code VARCHAR(10)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS otp_expires_at TIMESTAMPTZ",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255)",
+            "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS min_qed FLOAT",
+            "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS temperature FLOAT",
+            "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS min_smiles_len INTEGER",
+            "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS max_smiles_len INTEGER",
+            "ALTER TABLE predictions ADD COLUMN IF NOT EXISTS num_leads INTEGER",
+        ]:
+            try:
+                await conn.execute(text(sql))
+            except Exception:
+                pass

@@ -5,6 +5,7 @@ from typing import Optional, Any
 
 # ---------- Auth ----------
 class RegisterRequest(BaseModel):
+    username: str = Field(min_length=2, max_length=50)
     email: EmailStr
     password: str = Field(min_length=8)
     consent: bool = Field(..., description="Must accept scientific data consent")
@@ -17,6 +18,16 @@ class LoginRequest(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
+    new_password: str = Field(min_length=8)
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=8)
 
 
@@ -76,6 +87,7 @@ class TokenResponse(BaseModel):
 class UserPublic(BaseModel):
     id: int
     email: str
+    username: Optional[str] = None
     tokens_left: int
     plan: str
     email_verified: bool = False

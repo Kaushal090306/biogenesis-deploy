@@ -8,7 +8,6 @@ import PredictForm from '../components/PredictForm'
 import ResultsPanel from '../components/ResultsPanel'
 import HistoryTable from '../components/HistoryTable'
 import UpgradeModal from '../components/UpgradeModal'
-import TokenBadge from '../components/TokenBadge'
 
 export default function DashboardPage() {
   const { user, updateUser } = useAuth()
@@ -86,15 +85,6 @@ export default function DashboardPage() {
       <Navbar onUpgrade={() => setShowUpgrade(true)} />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pt-24">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-1">Research Dashboard</h1>
-            <p className="text-slate-500 text-sm">Run de novo drug discovery pipelines from protein sequences</p>
-          </div>
-          <TokenBadge user={user} onUpgrade={() => setShowUpgrade(true)} />
-        </div>
-
         {/* Tabs */}
         <div className="flex gap-1 p-1 bg-surface-800/60 rounded-xl border border-white/[0.05] w-fit mb-8">
           {TABS.map((t) => (
@@ -126,6 +116,7 @@ export default function DashboardPage() {
               onResult={handlePredictionComplete}
               onTokensExhausted={handleTokensLow}
               userTokens={user?.tokens_left ?? 0}
+              onClearResult={() => setResult(null)}
             />
             {/* Results — full width below */}
             {result

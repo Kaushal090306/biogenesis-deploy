@@ -33,6 +33,11 @@ async def predict(
         user_id=current_user.id,
         sequence=payload.sequence[:2000],  # trim for storage
         status="pending",
+        min_qed=payload.params.min_qed,
+        temperature=payload.params.temperature,
+        min_smiles_len=payload.params.min_smiles_len,
+        max_smiles_len=payload.params.max_smiles_len,
+        num_leads=payload.params.num_leads,
     )
     db.add(pred_record)
     await db.commit()

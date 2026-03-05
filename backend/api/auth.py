@@ -1,5 +1,6 @@
 import logging
 import random
+import secrets
 import string
 import smtplib
 import asyncio
@@ -17,7 +18,7 @@ from db import models as db_models
 from models.schemas import (
     RegisterRequest, LoginRequest, TokenResponse, UserPublic,
     SendOtpRequest, VerifyOtpRequest, GoogleAuthRequest, OtpRequiredResponse,
-    ChangePasswordRequest,
+    ChangePasswordRequest, ForgotPasswordRequest, ResetPasswordRequest,
 )
 from core.security import hash_password, verify_password, create_access_token
 from core.config import get_settings
@@ -33,7 +34,8 @@ OTP_EXPIRE_MINUTES = 10
 # ─────────────────────────── helpers ──────────────────────────────────────────
 
 def _generate_otp(length: int = 6) -> str:
-    return "".join(random.choices(string.digits, k=length))
+    """Generate a cryptographically secure OTP."""
+    return "".join(secrets.choice(string.digits) for _ in range(length))
 
 
 def _send_email_sync(to_email: str, otp: str) -> None:
@@ -60,14 +62,78 @@ def _send_email_sync(to_email: str, otp: str) -> None:
         smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
 
 
+def _send_reset_email_sync(to_email: str, otp: str) -> None:
+    """Send password reset OTP email."""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Reset your BioGenesis password"
+    msg["From"] = f"BioGenesis <{settings.SMTP_USER}>"
+    msg["To"] = to_email
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
+      <h2 style="color:#f87171;margin-bottom:8px;">BioGenesis — Password Reset</h2>
+      <p style="color:#94a3b8;">We received a request to reset the password for this account.</p>
+      <p style="color:#94a3b8;">Use the code below to reset your password:</p>
+      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
+      <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. If you did not request a password reset, you can safely ignore this email.</p>
+    </div>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
+
+
+def _send_password_changed_email_sync(to_email: str) -> None:
+    """Send password-changed confirmation email."""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Your BioGenesis password has been changed"
+    msg["From"] = f"BioGenesis <{settings.SMTP_USER}>"
+    msg["To"] = to_email
+
+    html = """
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
+      <h2 style="color:#34d399;margin-bottom:8px;">BioGenesis — Password Changed</h2>
+      <p style="color:#94a3b8;">Your account password was successfully changed.</p>
+      <p style="color:#94a3b8;">If you made this change, no further action is needed.</p>
+      <p style="color:#f87171;font-size:12px;">If you did not change your password, please contact our support immediately.</p>
+    </div>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
+
+
 async def _send_otp_email(to_email: str, otp: str) -> None:
     """Send OTP via SMTP in a thread to avoid blocking the event loop."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning("SMTP not configured — OTP for %s is: %s", to_email, otp)
         return
-    # Run synchronous SMTP in a thread pool so we don't block the async event loop
     await asyncio.to_thread(_send_email_sync, to_email, otp)
     logger.info("OTP email sent to %s", to_email)
+
+
+async def _send_reset_otp_email(to_email: str, otp: str) -> None:
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning("SMTP not configured — reset OTP for %s is: %s", to_email, otp)
+        raise RuntimeError("SMTP credentials not configured on server.")
+    await asyncio.to_thread(_send_reset_email_sync, to_email, otp)
+    logger.info("Password reset OTP sent to %s", to_email)
+
+
+async def _send_password_changed_email(to_email: str) -> None:
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning("SMTP not configured — password changed for %s", to_email)
+        return
+    await asyncio.to_thread(_send_password_changed_email_sync, to_email)
+    logger.info("Password changed email sent to %s", to_email)
 
 
 # ─────────────────────────── register ─────────────────────────────────────────
@@ -86,6 +152,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
 
     user = db_models.User(
         email=payload.email,
+        username=payload.username,
         password_hash=hash_password(payload.password),
         tokens_left=settings.FREE_TOKENS,
         plan="free",
@@ -255,7 +322,67 @@ async def change_password(
     db.add(current_user)
     await db.commit()
     logger.info("Password changed for user: %s", current_user.email)
+    try:
+        await _send_password_changed_email(current_user.email)
+    except Exception as exc:
+        logger.error("Failed to send password-changed email: %s", exc)
     return {"detail": "Password updated successfully."}
+
+
+# ─────────────────────────── forgot password ──────────────────────────────────
+
+@router.post("/forgot-password", status_code=200)
+async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        # Don't leak whether address is registered
+        raise HTTPException(status_code=404, detail="No account found with that email address.")
+
+    otp = _generate_otp()
+    user.otp_code = otp
+    user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
+    await db.commit()
+
+    try:
+        await _send_reset_otp_email(payload.email, otp)
+    except Exception as exc:
+        logger.error("Failed to send reset OTP to %s: %s", payload.email, exc)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not send reset email. Please try again in a few moments.",
+        )
+
+    return {"detail": "Reset code sent to your email."}
+
+
+# ─────────────────────────── reset password ───────────────────────────────────
+
+@router.post("/reset-password", status_code=200)
+async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid request.")
+
+    now = datetime.now(timezone.utc)
+    if not user.otp_code or user.otp_code != payload.otp:
+        raise HTTPException(status_code=400, detail="Incorrect reset code.")
+    if not user.otp_expires_at or user.otp_expires_at < now:
+        raise HTTPException(status_code=400, detail="Reset code has expired. Please request a new one.")
+
+    user.password_hash = hash_password(payload.new_password)
+    user.otp_code = None
+    user.otp_expires_at = None
+    await db.commit()
+    logger.info("Password reset for user: %s", user.email)
+
+    try:
+        await _send_password_changed_email(user.email)
+    except Exception as exc:
+        logger.error("Failed to send password-changed confirmation: %s", exc)
+
+    return {"detail": "Password reset successfully. You can now sign in."}
 
 
 # ─────────────────────────── me ───────────────────────────────────────────────

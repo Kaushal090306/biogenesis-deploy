@@ -9,6 +9,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    username: Mapped[str | None] = mapped_column(String(100), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     tokens_left: Mapped[int] = mapped_column(Integer, default=10)
     plan: Mapped[str] = mapped_column(String(50), default="free")
@@ -38,6 +39,12 @@ class Prediction(Base):
     lead_count: Mapped[int] = mapped_column(Integer, default=0)
     top_affinity: Mapped[str | None] = mapped_column(String(50), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending/done/failed
+    # Settings used for this prediction
+    min_qed: Mapped[float | None] = mapped_column(nullable=True)
+    temperature: Mapped[float | None] = mapped_column(nullable=True)
+    min_smiles_len: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    max_smiles_len: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    num_leads: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
