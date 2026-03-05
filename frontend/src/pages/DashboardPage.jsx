@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useAuth } from '../contexts/AuthContext'
-import { getProfile, getHistory } from '../services/api'
+import { getProfile, getHistory, getPredictionDetail } from '../services/api'
 import Navbar from '../components/Navbar'
 import PredictForm from '../components/PredictForm'
 import ResultsPanel from '../components/ResultsPanel'
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [historyTotal, setHistoryTotal] = useState(0)
   const [historyPage, setHistoryPage] = useState(1)
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingDetail, setLoadingDetail] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
   const [activeTab, setActiveTab] = useState('predict') // 'predict' | 'history'
 
@@ -56,6 +57,23 @@ export default function DashboardPage() {
 
   function handleTokensLow() {
     setShowUpgrade(true)
+  }
+
+  async function handleHistoryView(item) {
+    setLoadingDetail(true)
+    const tid = toast.loading('Loading prediction results…')
+    try {
+      const res = await getPredictionDetail(item.id)
+      const { leads, csv_str, image_base64, sequence } = res.data
+      setResult({ leads, csv_str, image_base64, sequence, prediction_id: item.id })
+      setActiveTab('predict')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      toast.success(`Loaded prediction #${item.id}`, { id: tid })
+    } catch {
+      toast.error('Could not load prediction results.', { id: tid })
+    } finally {
+      setLoadingDetail(false)
+    }
   }
 
   const TABS = [
@@ -139,6 +157,7 @@ export default function DashboardPage() {
               onPageChange={setHistoryPage}
               loading={loadingHistory}
               onRefresh={fetchHistory}
+              onView={handleHistoryView}
             />
           </motion.div>
         )}

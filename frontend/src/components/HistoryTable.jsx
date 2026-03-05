@@ -1,4 +1,4 @@
-import { RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react'
+import { RefreshCw, ChevronLeft, ChevronRight, Eye } from 'lucide-react'
 
 function StatusBadge({ status }) {
   const map = {
@@ -25,7 +25,7 @@ function Skeleton() {
   )
 }
 
-export default function HistoryTable({ items, total, page, onPageChange, loading, onRefresh }) {
+export default function HistoryTable({ items, total, page, onPageChange, loading, onRefresh, onView }) {
   const totalPages = Math.max(1, Math.ceil(total / 10))
 
   return (
@@ -54,6 +54,7 @@ export default function HistoryTable({ items, total, page, onPageChange, loading
               <th>Top Affinity</th>
               <th>Status</th>
               <th>Date</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -68,12 +69,16 @@ export default function HistoryTable({ items, total, page, onPageChange, loading
                 </tr>
               )
               : items.map((item) => (
-                <tr key={item.id}>
+                <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
                   <td className="font-mono text-xs text-slate-500">#{item.id}</td>
                   <td>
-                    <span className="font-mono text-xs text-slate-400 max-w-[200px] block truncate" title={item.sequence}>
+                    <button
+                      onClick={() => onView && onView(item)}
+                      className="font-mono text-xs text-brand-400 hover:text-brand-300 max-w-[200px] block truncate text-left transition-colors"
+                      title={item.sequence}
+                    >
                       {item.sequence}
-                    </span>
+                    </button>
                   </td>
                   <td>
                     <span className="font-bold text-brand-300">{item.lead_count}</span>
@@ -88,6 +93,17 @@ export default function HistoryTable({ items, total, page, onPageChange, loading
                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                       })}
                     </span>
+                  </td>
+                  <td>
+                    {item.status === 'done' && (
+                      <button
+                        onClick={() => onView && onView(item)}
+                        className="flex items-center gap-1 text-xs text-slate-400 hover:text-brand-300 bg-white/[0.04] hover:bg-brand-900/30 border border-white/[0.06] px-2.5 py-1 rounded-lg transition-all"
+                      >
+                        <Eye size={12} />
+                        View
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

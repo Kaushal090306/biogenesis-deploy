@@ -15,6 +15,39 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+
+class RazorpayOrderResponse(BaseModel):
+    order_id: str
+    key_id: str
+    amount: int
+    currency: str
+    plan: str
+
+
+class RazorpayVerifyRequest(BaseModel):
+    payment_id: str
+    order_id: str
+    signature: str
+    plan: str
+
+
+class PredictionDetail(BaseModel):
+    id: int
+    sequence: str
+    leads: list
+    csv_str: str
+    image_base64: str
+    lead_count: int
+    top_affinity: Optional[str]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class SendOtpRequest(BaseModel):
     email: EmailStr
 
@@ -106,13 +139,9 @@ class PaginatedHistory(BaseModel):
     page_size: int
 
 
-# ---------- Stripe ----------
+# ---------- Checkout ----------
 class CheckoutRequest(BaseModel):
     plan: str = Field(..., pattern="^(pro|enterprise)$")
-
-
-class CheckoutResponse(BaseModel):
-    checkout_url: str
 
 
 # ---------- Health ----------
