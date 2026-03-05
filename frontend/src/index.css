@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  
+  html { scroll-behavior: smooth; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #0a0f1e; }
+  ::-webkit-scrollbar-thumb { background: #1a243d; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #14b8a6; }
+
+  ::selection { background: rgba(20,184,166,0.3); color: #fff; }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-surface-800/80 backdrop-blur-xl border border-white/[0.06] rounded-2xl;
+  }
+
+  .btn-primary {
+    @apply bg-brand-600 hover:bg-brand-500 text-white font-semibold px-6 py-2.5 rounded-xl
+           transition-all duration-200 shadow-lg shadow-brand-900/50
+           disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-surface-900;
+  }
+
+  .btn-outline {
+    @apply border border-brand-700/60 hover:border-brand-500 text-brand-400 hover:text-brand-300
+           font-medium px-6 py-2.5 rounded-xl transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-surface-900;
+  }
+
+  .input-field {
+    @apply w-full bg-surface-750/60 border border-white/[0.07] rounded-xl px-4 py-3 text-white
+           placeholder:text-slate-500 focus:outline-none focus:border-brand-500/70 focus:ring-1 focus:ring-brand-500/50
+           transition-all duration-200 font-mono text-sm;
+  }
+
+  .label-text { @apply text-sm font-medium text-slate-300 mb-1.5 block; }
+
+  .badge-free   { @apply bg-slate-700/60 text-slate-300 text-xs px-2.5 py-1 rounded-full font-medium; }
+  .badge-pro    { @apply bg-brand-900/60 text-brand-300 text-xs px-2.5 py-1 rounded-full font-medium border border-brand-700/40; }
+  .badge-enterprise { @apply bg-amber-900/60 text-amber-300 text-xs px-2.5 py-1 rounded-full font-medium border border-amber-700/40; }
+
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      rgba(255,255,255,0.03) 25%,
+      rgba(255,255,255,0.08) 50%,
+      rgba(255,255,255,0.03) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .glow-line {
+    @apply h-px w-full;
+    background: linear-gradient(90deg, transparent, rgba(20,184,166,0.5), transparent);
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #5eead4 0%, #14b8a6 50%, #2dd4bf 100%);
+  }
+  
+  .border-gradient {
+    border-image: linear-gradient(135deg, rgba(20,184,166,0.5), transparent) 1;
+  }
+}
+
+/* Molecule table */
+.leads-table th {
+  @apply text-xs text-slate-400 uppercase tracking-wider font-semibold px-4 py-3 text-left;
+  background: rgba(255,255,255,0.02);
+}
+.leads-table td {
+  @apply text-sm text-slate-300 px-4 py-3 border-t border-white/[0.04];
+}
+.leads-table tr:hover td { background: rgba(20,184,166,0.04); }
+
+/* Custom range slider */
+input[type=range] { @apply accent-brand-500; }

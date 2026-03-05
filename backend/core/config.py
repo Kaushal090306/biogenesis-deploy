@@ -1,0 +1,46 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    # Database
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:password@localhost:5432/biogenesis"
+
+    # JWT
+    JWT_SECRET: str = "CHANGE_ME"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+
+    # Hugging Face
+    HF_TOKEN: str = ""
+    HF_GEN_MODEL_REPO: str = "swayamprakashpatel/biogenesis-full-models"
+    HF_GEN_MODEL_FILE: str = "Gen_AI_Model.pt"
+    HF_PRED_MODEL_FILE: str = "biogenesis_checkpoint.pt"
+    HF_VOCAB_FILE: str = "BioGenesis_Vocab.json"
+    HF_SMILE_VOCAB_FILE: str = "smile_atom_level_vocab.json"
+    HF_ESM_MODEL_NAME: str = "facebook/esm2_t33_650M_UR50D"
+
+    # Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRO_PRICE_ID: str = ""
+    STRIPE_ENTERPRISE_PRICE_ID: str = ""
+
+    # Encryption
+    FERNET_KEY: str = ""
+
+    # App
+    FRONTEND_URL: str = "http://localhost:5173"
+    FREE_TOKENS: int = 10
+    RATE_LIMIT_PER_MINUTE: int = 5
+
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()

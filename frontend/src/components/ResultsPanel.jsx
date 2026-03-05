@@ -1,0 +1,201 @@
+import { useState } from 'react'
+import { motion } from 'framer-motion'
+import { Download, ChevronUp, ChevronDown, Dna, FlaskConical, FileSpreadsheet, Image as ImageIcon } from 'lucide-react'
+
+// Matches Gradio DataFrame column order exactly
+const COL_DEFS = [
+  { key: 'compound_id',         label: 'Compound_ID',        mono: true },
+  { key: 'smiles',              label: 'SMILES',             mono: true, truncate: true },
+  { key: 'mw',                  label: 'MW',                 sortable: true },
+  { key: 'logp',                label: 'LogP',               sortable: true },
+  { key: 'hbd',                 label: 'HBD' },
+  { key: 'hba',                 label: 'HBA' },
+  { key: 'tpsa',                label: 'TPSA' },
+  { key: 'qed',                 label: 'QED',                sortable: true },
+  { key: 'synthetizability',    label: 'Synthetizability',   sortable: true },
+  { key: 'ro5_pass',            label: 'Ro5_Pass' },
+  { key: 'predicted_p_affinity',label: 'Predicted_pAffinity',sortable: true, highlight: true },
+  { key: 'activity_class',      label: 'Activity_Class' },
+]
+
+export default function ResultsPanel({ result }) {
+  const [sortKey, setSortKey] = useState('predicted_p_affinity')
+  const [sortAsc, setSortAsc] = useState(false)
+  const [expandImg, setExpandImg] = useState(false)
+
+  if (!result) {
+    return (
+      <div className="glass-card border border-white/[0.07] flex flex-col items-center justify-center min-h-[500px] text-center p-12">
+        <div className="text-5xl mb-4 animate-float">🧬</div>
+        <h3 className="text-lg font-semibold text-slate-300 mb-2">Awaiting Prediction</h3>
+        <p className="text-slate-600 text-sm max-w-xs leading-relaxed">
+          Configure parameters and run the pipeline to see ranked drug candidates, structures, and analytics here.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-2 justify-center text-xs text-slate-700">
+          {['SMILES','MW','LogP','HBD','HBA','TPSA','QED','Ro5','pAffinity','Structures'].map(l => (
+            <span key={l} className="px-3 py-1.5 bg-surface-800 rounded-lg border border-white/[0.04]">{l}</span>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const { leads, image_base64, csv_str, prediction_id, sequence } = result
+
+  const sorted = [...leads].sort((a, b) => {
+    const va = a[sortKey] ?? 0, vb = b[sortKey] ?? 0
+    return sortAsc ? va - vb : vb - va
+  })
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortAsc(!sortAsc)
+    else { setSortKey(key); setSortAsc(false) }
+  }
+
+  function downloadCSV() {
+    const blob = new Blob([csv_str], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = `Discovery_Report_${prediction_id}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function downloadImage() {
+    const a = document.createElement('a')
+    a.href = `data:image/png;base64,${image_base64}`
+    a.download = `Structure_Report_300DPI_${prediction_id}.png`; a.click()
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex flex-col gap-5"
+    >
+      {/* ── 1. Protein Sequence Echo ── */}
+      <div className="glass-card border border-white/[0.07] p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Dna size={15} className="text-brand-400" />
+          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Target Protein Sequence</span>
+          <span className="ml-auto text-xs text-slate-600">{sequence?.length} residues · Run #{prediction_id}</span>
+        </div>
+        <div className="bg-surface-800/60 rounded-lg border border-white/[0.05] px-4 py-3 font-mono text-xs text-brand-300 leading-relaxed break-all">
+          {sequence}
+        </div>
+      </div>
+
+      {/* ── 2. Structure Image (Top Candidates ranked by Affinity) ── */}
+      <div className="glass-card border border-white/[0.07] overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.05] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ImageIcon size={14} className="text-brand-400" />
+            <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              Top Candidate Structures (Ranked by Affinity)
+            </span>
+            <span className="text-xs text-slate-600">· top {Math.min(12, leads.length)} shown</span>
+          </div>
+          <button
+            onClick={() => setExpandImg(!expandImg)}
+            className="text-xs text-brand-500 hover:text-brand-400 transition-colors"
+          >
+            {expandImg ? 'Shrink' : 'Expand'}
+          </button>
+        </div>
+        <div className={`bg-white ${expandImg ? '' : 'max-h-[520px]'} overflow-hidden`}>
+          <img
+            src={`data:image/png;base64,${image_base64}`}
+            alt="Molecule structure grid"
+            className="w-full h-auto block"
+          />
+        </div>
+      </div>
+
+      {/* ── 3. Download Buttons (CSV + PNG side by side, like Gradio) ── */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={downloadCSV}
+          className="btn-outline flex items-center justify-center gap-2 py-3 text-sm"
+        >
+          <FileSpreadsheet size={16} />
+          Download Full CSV Report
+        </button>
+        <button
+          onClick={downloadImage}
+          className="btn-outline flex items-center justify-center gap-2 py-3 text-sm"
+        >
+          <Download size={16} />
+          Download 300 DPI Structure Grid
+        </button>
+      </div>
+
+      {/* ── 4. Full Lead Analysis Table (all Gradio columns) ── */}
+      <div className="glass-card border border-white/[0.07] overflow-hidden">
+        <div className="px-4 py-3 border-b border-white/[0.05] flex items-center gap-2">
+          <FlaskConical size={14} className="text-brand-400" />
+          <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Comprehensive Lead Analysis Table</span>
+          <span className="ml-auto text-xs bg-brand-900/60 text-brand-300 border border-brand-800/40 px-2 py-0.5 rounded-full">
+            {leads.length} leads
+          </span>
+        </div>
+
+        {/* Horizontally scrollable table */}
+        <div className="overflow-x-auto">
+          <table className="leads-table w-full text-xs">
+            <thead>
+              <tr>
+                {COL_DEFS.map((col) => (
+                  <th
+                    key={col.key}
+                    onClick={col.sortable ? () => toggleSort(col.key) : undefined}
+                    className={`whitespace-nowrap ${col.sortable ? 'cursor-pointer hover:text-brand-400 select-none' : ''}`}
+                  >
+                    <div className="flex items-center gap-1">
+                      {col.label}
+                      {col.sortable && (
+                        <span className={sortKey === col.key ? 'text-brand-400' : 'text-slate-700'}>
+                          {sortKey === col.key ? (sortAsc ? <ChevronUp size={11}/> : <ChevronDown size={11}/>) : <ChevronDown size={11} className="opacity-30"/>}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((lead, i) => (
+                <tr key={lead.compound_id} className={i === 0 ? 'bg-brand-950/25' : ''}>
+                  {COL_DEFS.map((col) => {
+                    const val = lead[col.key]
+                    return (
+                      <td key={col.key} className={`whitespace-nowrap ${col.highlight ? 'font-bold text-brand-300' : ''}`}>
+                        {col.key === 'smiles' ? (
+                          <span
+                            className="font-mono block max-w-[180px] truncate"
+                            title={String(val)}
+                          >
+                            {val}
+                          </span>
+                        ) : col.key === 'compound_id' ? (
+                          <span className="font-mono text-slate-300">{val}</span>
+                        ) : col.key === 'ro5_pass' ? (
+                          <span className={val === 'Yes' ? 'text-green-400 font-semibold' : 'text-rose-400 font-semibold'}>{val}</span>
+                        ) : col.key === 'activity_class' ? (
+                          <span className={`px-2 py-0.5 rounded-full ${
+                            val === 'Inhibitor' ? 'bg-rose-900/50 text-rose-300' : 'bg-green-900/50 text-green-300'
+                          }`}>{val}</span>
+                        ) : (
+                          val
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
