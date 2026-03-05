@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import toast from 'react-hot-toast'
-import { Play, RotateCcw, ChevronDown, ChevronUp, Info } from 'lucide-react'
+import { Play, RotateCcw, Info } from 'lucide-react'
 import { runPrediction } from '../services/api'
 
 const EXAMPLE_SEQ = 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPLADQFALGDGAVGRFKVETEADVGVDSTDAIRRLAKEAGLDGVIADKNDVTIEDPGT'
@@ -18,7 +18,6 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens })
   const [params, setParams] = useState(() =>
     Object.fromEntries(SLIDER_CONFIG.map((s) => [s.key, s.default]))
   )
-  const [advanced, setAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
 
@@ -105,18 +104,18 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens })
 
   return (
     <div className="glass-card border border-white/[0.07] overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.05] flex items-center justify-between">
+      <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
         <div>
           <h2 className="font-semibold text-white text-sm">Configure Pipeline</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Input your target protein sequence</p>
+          <p className="text-xs text-slate-500 mt-0.5">Input your target protein sequence and parameters</p>
         </div>
         <button onClick={reset} className="text-slate-500 hover:text-slate-300 transition-colors">
           <RotateCcw size={15} />
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-5 space-y-5">
-        {/* Sequence input */}
+      <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        {/* Row 1: Sequence textarea */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="label-text mb-0">Protein Sequence</label>
@@ -131,53 +130,24 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens })
           <textarea
             value={sequence}
             onChange={(e) => setSequence(e.target.value)}
-            rows={5}
-            className="input-field resize-none leading-relaxed tracking-wider text-brand-300"
-            placeholder="MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQ…
-Paste your target protein amino acid sequence here."
+            rows={3}
+            className="input-field resize-none leading-relaxed tracking-wider text-brand-300 text-xs"
+            placeholder="Paste your target protein amino acid sequence here (single-letter codes)…"
             required
           />
-          <div className="flex justify-between mt-1">
-            <span className="text-xs text-slate-600">
-              {sequence.length > 0 ? `${sequence.length} residues` : 'Standard single-letter codes'}
-            </span>
-          </div>
+          <span className="text-xs text-slate-600 mt-1 block">
+            {sequence.length > 0 ? `${sequence.length} residues` : 'Standard single-letter codes · min 10 residues'}
+          </span>
         </div>
 
-        {/* Quick params */}
-        <div className="grid grid-cols-2 gap-4">
-          {SLIDER_CONFIG.slice(0, 2).map((s) => (
+        {/* Row 2: All sliders in one horizontal row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          {SLIDER_CONFIG.map((s) => (
             <SliderField key={s.key} config={s} value={params[s.key]} onChange={(v) => setParam(s.key, v)} />
           ))}
         </div>
 
-        {/* Num leads */}
-        <SliderField
-          config={SLIDER_CONFIG[4]}
-          value={params.num_leads}
-          onChange={(v) => setParam('num_leads', v)}
-          full
-        />
-
-        {/* Advanced toggle */}
-        <button
-          type="button"
-          onClick={() => setAdvanced(!advanced)}
-          className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          {advanced ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          {advanced ? 'Hide' : 'Show'} advanced parameters
-        </button>
-
-        {advanced && (
-          <div className="grid grid-cols-2 gap-4 pt-1">
-            {SLIDER_CONFIG.slice(2, 4).map((s) => (
-              <SliderField key={s.key} config={s} value={params[s.key]} onChange={(v) => setParam(s.key, v)} />
-            ))}
-          </div>
-        )}
-
-        {/* Submit */}
+        {/* Row 3: Submit */}
         <button
           type="submit"
           disabled={loading || userTokens <= 0}
@@ -193,7 +163,7 @@ Paste your target protein amino acid sequence here."
               <Play size={16} fill="currentColor" />
               <span>Run Discovery Pipeline</span>
               <span className="ml-auto text-xs bg-white/10 px-2 py-0.5 rounded-md">
-                {userTokens} left
+                {userTokens} token{userTokens !== 1 ? 's' : ''} left
               </span>
             </>
           )}

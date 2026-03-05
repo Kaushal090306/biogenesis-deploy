@@ -1,11 +1,23 @@
 import logging
+import random
+import string
+import smtplib
+import asyncio
+import functools
+from datetime import datetime, timedelta, timezone
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from db.database import get_db
 from db import models as db_models
-from models.schemas import RegisterRequest, LoginRequest, TokenResponse, UserPublic
+from models.schemas import (
+    RegisterRequest, LoginRequest, TokenResponse, UserPublic,
+    SendOtpRequest, VerifyOtpRequest, GoogleAuthRequest, OtpRequiredResponse,
+)
 from core.security import hash_password, verify_password, create_access_token
 from core.config import get_settings
 
@@ -13,17 +25,62 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+OTP_EXPIRE_MINUTES = 10
 
-@router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+
+# ─────────────────────────── helpers ──────────────────────────────────────────
+
+def _generate_otp(length: int = 6) -> str:
+    return "".join(random.choices(string.digits, k=length))
+
+
+def _send_email_sync(to_email: str, otp: str) -> None:
+    """Synchronous SMTP send — called via asyncio.to_thread."""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Your BioGenesis verification code"
+    msg["From"] = f"BioGenesis <{settings.SMTP_USER}>"
+    msg["To"] = to_email
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
+      <h2 style="color:#38bdf8;margin-bottom:8px;">BioGenesis</h2>
+      <p style="color:#94a3b8;">Your one-time verification code:</p>
+      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
+      <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. Do not share this code.</p>
+    </div>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
+
+
+async def _send_otp_email(to_email: str, otp: str) -> None:
+    """Send OTP via SMTP in a thread to avoid blocking the event loop."""
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        logger.warning("SMTP not configured — OTP for %s is: %s", to_email, otp)
+        return
+    # Run synchronous SMTP in a thread pool so we don't block the async event loop
+    await asyncio.to_thread(_send_email_sync, to_email, otp)
+    logger.info("OTP email sent to %s", to_email)
+
+
+# ─────────────────────────── register ─────────────────────────────────────────
+
+@router.post("/register", response_model=OtpRequiredResponse, status_code=status.HTTP_201_CREATED)
 async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
     if not payload.consent:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You must accept the scientific data consent to register.",
-        )
+        raise HTTPException(status_code=400, detail="You must accept the scientific data consent to register.")
+
     result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
     if result.scalar_one_or_none():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered.")
+        raise HTTPException(status_code=409, detail="Email already registered.")
+
+    otp = _generate_otp()
+    expires = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
 
     user = db_models.User(
         email=payload.email,
@@ -31,32 +88,162 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         tokens_left=settings.FREE_TOKENS,
         plan="free",
         consent_given=True,
+        email_verified=False,
+        otp_code=otp,
+        otp_expires_at=expires,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    logger.info("New user registered: %s (id=%d)", user.email, user.id)
+
+    try:
+        await _send_otp_email(payload.email, otp)
+    except Exception as exc:
+        logger.error("Failed to send OTP email: %s", exc)
+
+    logger.info("New user registered: %s (id=%d) — OTP sent", user.email, user.id)
+    return OtpRequiredResponse(email=payload.email)
+
+
+# ─────────────────────────── send-otp (resend) ────────────────────────────────
+
+@router.post("/send-otp", status_code=200)
+async def send_otp(payload: SendOtpRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        # Don't leak whether email exists
+        return {"detail": "If that email is registered, a code has been sent."}
+
+    if user.email_verified:
+        return {"detail": "Email already verified."}
+
+    otp = _generate_otp()
+    user.otp_code = otp
+    user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
+    await db.commit()
+
+    try:
+        await _send_otp_email(payload.email, otp)
+    except Exception as exc:
+        logger.error("Failed to resend OTP: %s", exc)
+
+    return {"detail": "Verification code sent."}
+
+
+# ─────────────────────────── verify-otp ───────────────────────────────────────
+
+@router.post("/verify-otp", response_model=TokenResponse)
+async def verify_otp(payload: VerifyOtpRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid request.")
+
+    if user.email_verified:
+        # Already verified — just return a token
+        token = create_access_token(str(user.id))
+        return TokenResponse(access_token=token, user=UserPublic.model_validate(user))
+
+    now = datetime.now(timezone.utc)
+    if not user.otp_code or user.otp_code != payload.otp:
+        raise HTTPException(status_code=400, detail="Incorrect verification code.")
+    if not user.otp_expires_at or user.otp_expires_at < now:
+        raise HTTPException(status_code=400, detail="Verification code has expired. Please request a new one.")
+
+    user.email_verified = True
+    user.otp_code = None
+    user.otp_expires_at = None
+    await db.commit()
+    await db.refresh(user)
 
     token = create_access_token(str(user.id))
+    logger.info("Email verified for user: %s", user.email)
     return TokenResponse(access_token=token, user=UserPublic.model_validate(user))
 
+
+# ─────────────────────────── login ────────────────────────────────────────────
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
     user = result.scalar_one_or_none()
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
+        raise HTTPException(status_code=401, detail="Invalid email or password.")
+
+    if not user.email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Email not verified. Please verify your email first.",
+            headers={"X-Requires-Verification": payload.email},
+        )
 
     token = create_access_token(str(user.id))
     logger.info("User login: %s", user.email)
     return TokenResponse(access_token=token, user=UserPublic.model_validate(user))
 
 
+# ─────────────────────────── google OAuth ─────────────────────────────────────
+
+@router.post("/google", response_model=TokenResponse)
+async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        from google.oauth2 import id_token
+        from google.auth.transport import requests as google_requests
+        idinfo = id_token.verify_oauth2_token(
+            payload.credential,
+            google_requests.Request(),
+            settings.GOOGLE_CLIENT_ID,
+        )
+    except Exception as exc:
+        logger.warning("Google token verification failed: %s", exc)
+        raise HTTPException(status_code=400, detail="Invalid Google token.")
+
+    google_email: str = idinfo.get("email", "")
+    google_sub: str = idinfo.get("sub", "")
+    if not google_email:
+        raise HTTPException(status_code=400, detail="Google account has no email.")
+
+    # Find existing user by google_id or email
+    result = await db.execute(
+        select(db_models.User).where(
+            (db_models.User.google_id == google_sub) | (db_models.User.email == google_email)
+        )
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        # Update google_id if missing
+        if not user.google_id:
+            user.google_id = google_sub
+        user.email_verified = True
+        await db.commit()
+        await db.refresh(user)
+    else:
+        # Create new user (no password required for Google accounts)
+        user = db_models.User(
+            email=google_email,
+            password_hash="",          # Google-only account
+            google_id=google_sub,
+            tokens_left=settings.FREE_TOKENS,
+            plan="free",
+            consent_given=True,
+            email_verified=True,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+        logger.info("New Google user registered: %s", user.email)
+
+    token = create_access_token(str(user.id))
+    return TokenResponse(access_token=token, user=UserPublic.model_validate(user))
+
+
+# ─────────────────────────── me ───────────────────────────────────────────────
+
 @router.get("/me", response_model=UserPublic)
 async def get_me(
     db: AsyncSession = Depends(get_db),
-    current_user: db_models.User = Depends(lambda: None),  # replaced in main via dep override
+    current_user: db_models.User = Depends(lambda: None),
 ):
-    # This endpoint is wired in main with correct dependency
     raise HTTPException(status_code=500, detail="Dependency misconfigured")

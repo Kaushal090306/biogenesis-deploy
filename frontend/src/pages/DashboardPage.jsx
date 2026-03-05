@@ -101,26 +101,27 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
+            className="flex flex-col gap-6"
           >
-            {/* Form always on top; results appear below when available */}
-            <div className={result ? 'grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6 items-start' : 'max-w-2xl'}>
-              <PredictForm
-                onResult={handlePredictionComplete}
-                onTokensExhausted={handleTokensLow}
-                userTokens={user?.tokens_left ?? 0}
-              />
-              {result && <ResultsPanel result={result} />}
-            </div>
-            {!result && (
-              <div className="mt-8 flex flex-col items-center justify-center text-center py-16 glass-card border border-white/[0.05]">
-                <div className="text-5xl mb-4 animate-float">🧬</div>
-                <h3 className="text-base font-semibold text-slate-300 mb-2">Awaiting Pipeline Run</h3>
-                <p className="text-slate-600 text-sm max-w-xs leading-relaxed">
-                  Enter a protein sequence, configure parameters, and click Run Discovery Pipeline.
-                  Results will show the structure image, all compound metrics, and download links.
-                </p>
-              </div>
-            )}
+            {/* Form — always full width at top */}
+            <PredictForm
+              onResult={handlePredictionComplete}
+              onTokensExhausted={handleTokensLow}
+              userTokens={user?.tokens_left ?? 0}
+            />
+            {/* Results — full width below */}
+            {result
+              ? <ResultsPanel result={result} />
+              : (
+                <div className="flex flex-col items-center justify-center text-center py-16 glass-card border border-white/[0.05]">
+                  <div className="text-5xl mb-4 animate-float">🧬</div>
+                  <h3 className="text-base font-semibold text-slate-300 mb-2">Awaiting Pipeline Run</h3>
+                  <p className="text-slate-600 text-sm max-w-xs leading-relaxed">
+                    Enter a protein sequence, configure parameters, and click Run Discovery Pipeline.
+                  </p>
+                </div>
+              )
+            }
           </motion.div>
         )}
 

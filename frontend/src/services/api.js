@@ -32,6 +32,15 @@ export const register = (email, password, consent) =>
 export const login = (email, password) =>
   api.post('/auth/login', { email, password })
 
+export const sendOtp = (email) =>
+  api.post('/auth/send-otp', { email })
+
+export const verifyOtp = (email, otp) =>
+  api.post('/auth/verify-otp', { email, otp })
+
+export const googleAuth = (credential) =>
+  api.post('/auth/google', { credential })
+
 // ── Prediction ──
 export const runPrediction = (sequence, params) =>
   api.post('/predict', { sequence, params }, { timeout: 600_000 }) // 10 min timeout for heavy inference
