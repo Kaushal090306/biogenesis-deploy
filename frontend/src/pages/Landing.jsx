@@ -355,7 +355,7 @@ export default function Landing() {
                       <div className="col-span-4">SMILES</div>
                       <div className="col-span-2">pAff</div>
                       <div className="col-span-2">QED</div>
-                      <div className="col-span-3">Class</div>
+                      <div className="col-span-3 pl-3">Class</div>
                     </div>
                     {[
                       { rank: 1, smiles: 'CC1=CC(=O)N(C)N1C', paff: 9.21, qed: 0.87, cls: 'Inhibitor', clsColor: 'text-rose-400 bg-rose-900/30 border-rose-700/30' },
@@ -381,7 +381,7 @@ export default function Landing() {
                             <span className="text-slate-400 text-[10px]">{row.qed}</span>
                           </div>
                         </div>
-                        <div className="col-span-3">
+                        <div className="col-span-3 pl-3">
                           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${row.clsColor}`}>
                             {row.cls}
                           </span>
