@@ -52,7 +52,7 @@ async def predict(
 
         # 4. Encrypt and persist results
         leads = result["leads"]
-        encrypted = encrypt_data({"leads": leads, "csv_str": result["csv_str"]})
+        encrypted = encrypt_data({"leads": leads, "csv_str": result["csv_str"], "image_base64": result.get("image_base64", "")})
         top_aff = str(leads[0]["predicted_p_affinity"]) if leads else None
 
         pred_record.results_encrypted = encrypted

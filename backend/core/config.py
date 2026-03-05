@@ -22,12 +22,6 @@ class Settings(BaseSettings):
     HF_SMILE_VOCAB_FILE: str = "smile_atom_level_vocab.json"
     HF_ESM_MODEL_NAME: str = "facebook/esm2_t33_650M_UR50D"
 
-    # Stripe
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_PRO_PRICE_ID: str = ""
-    STRIPE_ENTERPRISE_PRICE_ID: str = ""
-
     # Encryption
     FERNET_KEY: str = ""
 
@@ -39,6 +33,10 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
+
+    # Razorpay
+    RAZORPAY_KEY_ID: str = ""
+    RAZORPAY_KEY_SECRET: str = ""
 
     # SMTP (email OTP)
     SMTP_HOST: str = "smtp.gmail.com"

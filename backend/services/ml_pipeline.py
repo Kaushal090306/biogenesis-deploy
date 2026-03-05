@@ -360,3 +360,29 @@ def run_prediction(
     leads = df.to_dict(orient="records")
 
     return {"leads": leads, "image_base64": image_b64, "csv_str": csv_str}
+
+
+def generate_structure_image(leads: list) -> str:
+    """Regenerate the molecule grid PNG (base64) from a list of lead dicts.
+    Used to back-fill image_base64 for older predictions that were stored without it."""
+    if not leads:
+        return ""
+    try:
+        top_n = min(12, len(leads))
+        subset = leads[:top_n]
+        mols = [Chem.MolFromSmiles(r.get("smiles", "")) for r in subset]
+        mols = [m for m in mols if m is not None]
+        if not mols:
+            return ""
+        legends = [
+            f"{r.get('compound_id', '')} | pAff: {r.get('predicted_p_affinity', '')}\n{r.get('activity_class', '')}"
+            for r in subset[:len(mols)]
+        ]
+        grid_img = Draw.MolsToGridImage(
+            mols, molsPerRow=3, subImgSize=(500, 500), legends=legends, returnPNG=False
+        )
+        buf = io.BytesIO()
+        grid_img.save(buf, format="PNG")
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
+    except Exception:
+        return ""

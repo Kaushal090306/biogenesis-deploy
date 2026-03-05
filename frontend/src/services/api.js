@@ -54,6 +54,15 @@ export const getHistory = (page = 1, pageSize = 10) =>
 export const createCheckout = (plan) =>
   api.post('/dashboard/checkout', { plan })
 
+export const verifyCheckout = (payment_id, order_id, signature, plan) =>
+  api.post('/dashboard/checkout/verify', { payment_id, order_id, signature, plan })
+
+export const getPredictionDetail = (id) =>
+  api.get(`/dashboard/history/${id}`)
+
+export const changePassword = (current_password, new_password) =>
+  api.post('/auth/change-password', { current_password, new_password })
+
 // ── Health ──
 export const healthCheck = () => api.get('/health')
 

@@ -24,7 +24,7 @@ async def check_and_deduct(user: User, db: AsyncSession) -> None:
 
 
 async def replenish_tokens(user_id: int, plan: str, db: AsyncSession) -> None:
-    """Called after successful Stripe subscription. Updates plan + token balance."""
+    """Called after successful payment. Updates plan + token balance."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:

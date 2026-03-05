@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Zap, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { createCheckout } from '../services/api'
+import { createCheckout, verifyCheckout } from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 
 const PLANS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: '$10',
+    price: '₹799',
     period: '/month',
     tokens: 100,
     features: ['100 prediction runs/month', 'Full prediction history', 'Encrypted storage', 'Priority compute'],
@@ -29,6 +30,7 @@ const PLANS = [
 
 export default function UpgradeModal({ open, onClose }) {
   const [loading, setLoading] = useState(null)
+  const { updateUser } = useAuth()
 
   async function handleUpgrade(planId) {
     if (planId === 'enterprise') {
@@ -37,11 +39,44 @@ export default function UpgradeModal({ open, onClose }) {
     }
     setLoading(planId)
     try {
+      // 1. Create Razorpay order on backend
       const res = await createCheckout(planId)
-      window.location.href = res.data.checkout_url
-    } catch {
-      toast.error('Failed to start checkout. Please try again.')
-    } finally {
+      const { order_id, key_id, amount, currency } = res.data
+
+      // 2. Open Razorpay checkout modal
+      const rzp = new window.Razorpay({
+        key: key_id,
+        amount,
+        currency,
+        name: 'BioGenesis AI',
+        description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+        image: 'https://biogenesis.ai/logo.png',
+        order_id,
+        handler: async function (response) {
+          try {
+            // 3. Verify payment on backend
+            const verifyRes = await verifyCheckout(
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              response.razorpay_signature,
+              planId,
+            )
+            updateUser(verifyRes.data)
+            toast.success(`🎉 Upgraded to ${planId}! ${verifyRes.data.tokens_left} tokens added.`)
+            onClose()
+          } catch {
+            toast.error('Payment verified but upgrade failed. Contact support.')
+          }
+        },
+        prefill: {},
+        theme: { color: '#3b82f6' },
+        modal: {
+          ondismiss: () => setLoading(null),
+        },
+      })
+      rzp.open()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start checkout. Please try again.')
       setLoading(null)
     }
   }
@@ -67,10 +102,7 @@ export default function UpgradeModal({ open, onClose }) {
             transition={{ duration: 0.25, ease: 'easeOut' }}
             className="relative glass-card border border-white/[0.08] w-full max-w-2xl p-8"
           >
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors"
-            >
+            <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
               <X size={20} />
             </button>
 
@@ -80,7 +112,7 @@ export default function UpgradeModal({ open, onClose }) {
               </div>
               <h2 className="text-2xl font-bold text-white mb-2">Upgrade Your Plan</h2>
               <p className="text-slate-400 text-sm">
-                You've used all your free tokens. Upgrade to continue drug discovery.
+                Unlock more runs and continue your drug discovery research.
               </p>
             </div>
 
@@ -122,7 +154,7 @@ export default function UpgradeModal({ open, onClose }) {
                   <button
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={!!loading}
-                    className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 
+                    className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200
                       disabled:opacity-50 flex items-center justify-center gap-2
                       ${plan.highlight
                         ? 'bg-brand-600 hover:bg-brand-500 text-white'
@@ -140,7 +172,7 @@ export default function UpgradeModal({ open, onClose }) {
             </div>
 
             <p className="text-center text-xs text-slate-600 mt-6">
-              Payments powered by Stripe · Cancel anytime · All major cards accepted
+              Payments powered by Razorpay · Secure · All major cards &amp; UPI accepted
             </p>
           </motion.div>
         </div>
