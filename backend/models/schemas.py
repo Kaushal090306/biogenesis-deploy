@@ -15,6 +15,24 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SendOtpRequest(BaseModel):
+    email: EmailStr
+
+
+class VerifyOtpRequest(BaseModel):
+    email: EmailStr
+    otp: str = Field(min_length=6, max_length=6)
+
+
+class GoogleAuthRequest(BaseModel):
+    credential: str   # Google ID token from GSI
+
+
+class OtpRequiredResponse(BaseModel):
+    requires_verification: bool = True
+    email: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -27,6 +45,7 @@ class UserPublic(BaseModel):
     email: str
     tokens_left: int
     plan: str
+    email_verified: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
