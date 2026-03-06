@@ -12,7 +12,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from api import auth, predict, dashboard
+from api import auth, predict, dashboard, admin
 from core.config import get_settings
 from db.database import create_tables
 from models.schemas import HealthResponse
@@ -88,6 +88,7 @@ async def add_process_time(request: Request, call_next):
 app.include_router(auth.router, prefix="/api")
 app.include_router(predict.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
+app.include_router(admin.router, prefix="/api")
 
 # ──────────────────────────────────────────────
 # Health

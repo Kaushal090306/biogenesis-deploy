@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     HF_GEN_MODEL_REPO: str = "swayamprakashpatel/biogenesis-full-models"
     HF_GEN_MODEL_FILE: str = "Gen_AI_Model.pt"
     HF_PRED_MODEL_FILE: str = "biogenesis_checkpoint.pt"
-    HF_VOCAB_FILE: str = "BioGenesis_Vocab.json"
+    HF_GEN_VOCAB_FILE: str = "BioGenesis_2026_atom_level_vocab_Gold.json"
     HF_SMILE_VOCAB_FILE: str = "smile_atom_level_vocab.json"
     HF_ESM_MODEL_NAME: str = "facebook/esm2_t33_650M_UR50D"
 

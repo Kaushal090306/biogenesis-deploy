@@ -9,8 +9,7 @@ import {
 import { login, register, sendOtp, verifyOtp, googleAuth, forgotPassword, resetPassword } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
-const GOOGLE_CLIENT_ID = '178577348386-rt0558cgue3b1uiu2qq9fjd42mjakpb8.apps.googleusercontent.com'
-
+const GOOGLE_CLIENT_ID = '538406357868-j4i5hlsbclerbp9hk929g218881h1te2.apps.googleusercontent.com'
 // -- Shared card shell
 function AuthShell({ children }) {
   return (
@@ -27,7 +26,7 @@ function AuthShell({ children }) {
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <span className="text-3xl">🧬</span>
             <span className="font-bold text-xl tracking-tight">
-              <span className="text-gradient">PharmForge AI</span>
+              <span className="text-gradient">PharmForge</span>
               <span className="text-slate-400 font-normal"> AI</span>
             </span>
           </Link>

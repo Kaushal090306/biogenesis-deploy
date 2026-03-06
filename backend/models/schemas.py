@@ -95,6 +95,7 @@ class UserPublic(BaseModel):
     tokens_left: int
     plan: str
     email_verified: bool = False
+    is_admin: bool = False
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -106,7 +107,7 @@ class PredictParams(BaseModel):
     temperature: float = Field(default=0.8, ge=0.1, le=2.0)
     min_smiles_len: int = Field(default=40, ge=10, le=100)
     max_smiles_len: int = Field(default=100, ge=50, le=200)
-    num_leads: int = Field(default=9, ge=1, le=50)
+    num_leads: int = Field(default=9, ge=1, le=300)
 
 
 class PredictRequest(BaseModel):
@@ -123,8 +124,15 @@ class LeadCompound(BaseModel):
     hba: int
     tpsa: float
     qed: float
-    synthetizability: float
+    sa_score: float
+    hia_absorption: str
+    bbb_permeability: str
+    toxicity: str
+    tox_detail: str
     ro5_pass: str
+    ro5_violations: int
+    hbd_count: int
+    hba_count: int
     predicted_p_affinity: float
     activity_class: str
 
@@ -166,6 +174,57 @@ class HealthResponse(BaseModel):
     ml_loaded: bool
     db_connected: bool
     version: str = "1.0.0"
+
+
+# ---------- Admin ----------
+class AdminUserItem(BaseModel):
+    id: int
+    email: str
+    username: Optional[str] = None
+    tokens_left: int
+    plan: str
+    email_verified: bool
+    is_admin: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminPaginatedUsers(BaseModel):
+    items: list[AdminUserItem]
+    total: int
+    page: int
+    page_size: int
+
+
+class AdminEditUser(BaseModel):
+    username: Optional[str] = Field(default=None, min_length=2, max_length=50)
+    tokens_left: Optional[int] = Field(default=None, ge=0)
+    plan: Optional[str] = Field(default=None, pattern="^(free|pro|enterprise)$")
+    email_verified: Optional[bool] = None
+    is_admin: Optional[bool] = None
+
+
+class AdminPredictionItem(BaseModel):
+    id: int
+    user_id: int
+    user_email: str
+    sequence: str
+    lead_count: int
+    top_affinity: Optional[str]
+    status: str
+    num_leads: Optional[int]
+    min_qed: Optional[float]
+    temperature: Optional[float]
+    created_at: datetime
+
+
+class AdminPaginatedPredictions(BaseModel):
+    items: list[AdminPredictionItem]
+    total: int
+    page: int
+    page_size: int
+
 
 
 TokenResponse.model_rebuild()

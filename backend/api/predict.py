@@ -28,6 +28,18 @@ async def predict(
     # 1. Check & deduct token (raises 402 if empty)
     await token_service.check_and_deduct(current_user, db)
 
+    # 1b. Enforce per-plan lead cap (admin is exempt)
+    FREE_LEADS_MAX = 10
+    if not current_user.is_admin:
+        plan = (current_user.plan or "free").lower()
+        max_leads_for_plan = FREE_LEADS_MAX if plan == "free" else 300
+        if payload.params.num_leads > max_leads_for_plan:
+            from fastapi import HTTPException as _HTTPException
+            raise _HTTPException(
+                status_code=403,
+                detail=f"Free plan is limited to {FREE_LEADS_MAX} leads per run. Upgrade to Pro for up to 300.",
+            )
+
     # 2. Create pending prediction record
     pred_record = db_models.Prediction(
         user_id=current_user.id,

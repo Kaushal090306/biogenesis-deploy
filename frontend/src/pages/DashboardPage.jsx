@@ -144,7 +144,9 @@ export default function DashboardPage() {
               onResult={handlePredictionComplete}
               onTokensExhausted={handleTokensLow}
               userTokens={user?.tokens_left ?? 0}
+              userPlan={user?.plan ?? 'free'}
               onClearResult={() => setResult(null)}
+              onUpgrade={() => setShowUpgrade(true)}
             />
             {/* Results — full width below */}
             {result

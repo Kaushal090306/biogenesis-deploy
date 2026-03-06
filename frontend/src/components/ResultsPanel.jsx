@@ -2,18 +2,23 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Download, ChevronUp, ChevronDown, Dna, FlaskConical, FileSpreadsheet, Image as ImageIcon } from 'lucide-react'
 
-// Matches Gradio DataFrame column order exactly
+// Matches backend ml_pipeline.py lead entry fields
 const COL_DEFS = [
   { key: 'compound_id',         label: 'Compound_ID',        mono: true },
   { key: 'smiles',              label: 'SMILES',             mono: true, truncate: true },
   { key: 'mw',                  label: 'MW',                 sortable: true },
   { key: 'logp',                label: 'LogP',               sortable: true },
-  { key: 'hbd',                 label: 'HBD' },
-  { key: 'hba',                 label: 'HBA' },
   { key: 'tpsa',                label: 'TPSA' },
   { key: 'qed',                 label: 'QED',                sortable: true },
-  { key: 'synthetizability',    label: 'Synthetizability',   sortable: true },
+  { key: 'sa_score',            label: 'SA_Score',           sortable: true },
+  { key: 'hia_absorption',      label: 'HIA_Absorption' },
+  { key: 'bbb_permeability',    label: 'BBB_Permeability' },
+  { key: 'toxicity',            label: 'Toxicity' },
+  { key: 'tox_detail',          label: 'Tox_Detail' },
   { key: 'ro5_pass',            label: 'Ro5_Pass' },
+  { key: 'ro5_violations',      label: 'Ro5_Violations' },
+  { key: 'hbd_count',           label: 'HBD' },
+  { key: 'hba_count',           label: 'HBA' },
   { key: 'predicted_p_affinity',label: 'Predicted_pAffinity',sortable: true, highlight: true },
   { key: 'activity_class',      label: 'Activity_Class' },
 ]
@@ -32,7 +37,7 @@ export default function ResultsPanel({ result }) {
           Configure parameters and run the pipeline to see ranked drug candidates, structures, and analytics here.
         </p>
         <div className="mt-8 flex flex-wrap gap-2 justify-center text-xs text-slate-700">
-          {['SMILES','MW','LogP','HBD','HBA','TPSA','QED','Ro5','pAffinity','Structures'].map(l => (
+          {['SMILES','MW','LogP','TPSA','QED','SA_Score','HIA','BBB','Toxicity','Ro5','pAffinity','Structures'].map(l => (
             <span key={l} className="px-3 py-1.5 bg-surface-800 rounded-lg border border-white/[0.04]">{l}</span>
           ))}
         </div>
@@ -93,7 +98,7 @@ export default function ResultsPanel({ result }) {
             <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
               Top Candidate Structures (Ranked by Affinity)
             </span>
-            <span className="text-xs text-slate-600">· top {Math.min(12, leads.length)} shown</span>
+            <span className="text-xs text-slate-600">· {leads.length} structures</span>
           </div>
           <button
             onClick={() => setExpandImg(!expandImg)}
@@ -189,6 +194,10 @@ export default function ResultsPanel({ result }) {
                           <span className="font-mono text-slate-300">{val}</span>
                         ) : col.key === 'ro5_pass' ? (
                           <span className={val === 'Yes' ? 'text-green-400 font-semibold' : 'text-rose-400 font-semibold'}>{val}</span>
+                        ) : col.key === 'toxicity' ? (
+                          <span className={val === 'Safe' ? 'text-green-400 font-semibold' : 'text-amber-400 font-semibold'}>{val}</span>
+                        ) : col.key === 'hia_absorption' || col.key === 'bbb_permeability' ? (
+                          <span className={val === 'High' ? 'text-brand-300 font-semibold' : 'text-slate-500'}>{val}</span>
                         ) : col.key === 'activity_class' ? (
                           <span className={`px-2 py-0.5 rounded-full ${
                             val === 'Inhibitor' ? 'bg-rose-900/50 text-rose-300' : 'bg-green-900/50 text-green-300'

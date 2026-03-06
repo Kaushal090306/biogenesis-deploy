@@ -15,9 +15,10 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from PIL import Image
 from rdkit import Chem, RDLogger
-from rdkit.Chem import Descriptors, Draw, QED, rdMolDescriptors
+from rdkit.Chem import Descriptors, Draw, QED, rdMolDescriptors, Fragments
 
 warnings.filterwarnings("ignore")
 RDLogger.DisableLog("rdApp.*")
@@ -40,74 +41,69 @@ class SmilesVocabulary:
             self.token_to_idx = json.load(f)
         self.idx_to_token = {int(v): k for k, v in self.token_to_idx.items()}
 
-    def decode(self, token_ids) -> str:
-        tokens = []
-        for idx in token_ids:
-            idx_int = idx.item() if isinstance(idx, torch.Tensor) else int(idx)
-            if idx_int == self.token_to_idx.get(self.eos_token, -1):
+    def decode(self, ids) -> str:
+        res = []
+        for i in ids:
+            i = i.item() if isinstance(i, torch.Tensor) else int(i)
+            if i == 2:
                 break
-            if idx_int in (
-                self.token_to_idx.get(self.pad_token, -1),
-                self.token_to_idx.get(self.bos_token, -1),
-            ):
-                continue
-            tokens.append(self.idx_to_token.get(idx_int, ""))
-        return "".join(tokens)
+            if i > 2:
+                res.append(self.idx_to_token.get(i, ""))
+        return "".join(res)
 
     def __len__(self):
         return len(self.token_to_idx)
 
 
-class FiLM(nn.Module):
+class DeepFiLM(nn.Module):
     def __init__(self, cond_dim: int, hidden_dim: int):
         super().__init__()
-        self.gamma = nn.Linear(cond_dim, hidden_dim)
-        self.beta = nn.Linear(cond_dim, hidden_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(cond_dim, hidden_dim), nn.GELU(), nn.Linear(hidden_dim, hidden_dim * 2)
+        )
 
     def forward(self, x, cond):
-        return x * (1 + self.gamma(cond).unsqueeze(1)) + self.beta(cond).unsqueeze(1)
+        params = self.mlp(cond).unsqueeze(1)
+        gamma, beta = torch.chunk(params, 2, dim=-1)
+        return x * (1 + gamma) + beta
 
 
 class ConditionalVAE(nn.Module):
-    def __init__(
-        self, smiles_embedding_layer, vocab_size, smiles_embedding_dim,
-        protein_embedding_dim, hidden_dim, latent_dim, num_layers,
-    ):
+    def __init__(self, vocab_size, hidden_dim=768, latent_dim=768, num_layers=3):
         super().__init__()
         self.latent_dim, self.num_layers = latent_dim, num_layers
-        self.smiles_embedding_layer = smiles_embedding_layer
-        self.encoder_rnn = nn.GRU(smiles_embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True)
-        self.encoder_protein_mlp = nn.Sequential(
-            nn.Linear(protein_embedding_dim, hidden_dim), nn.ReLU(), nn.Linear(hidden_dim, hidden_dim)
-        )
-        self.fc_mu = nn.Linear(hidden_dim * 2, latent_dim)
-        self.fc_logvar = nn.Linear(hidden_dim * 2, latent_dim)
-        self.decoder_init = nn.Sequential(
-            nn.Linear(latent_dim + protein_embedding_dim, hidden_dim), nn.ReLU()
-        )
-        self.decoder_rnn = nn.GRU(smiles_embedding_dim, hidden_dim, num_layers=num_layers, batch_first=True)
-        self.film = FiLM(protein_embedding_dim, hidden_dim)
-        self.out_proj = nn.Linear(hidden_dim, smiles_embedding_dim, bias=False)
-        self.fc_out = nn.Linear(smiles_embedding_dim, vocab_size, bias=False)
+        self.smiles_embedding_layer = nn.Embedding(vocab_size, 768, padding_idx=0)
+        self.decoder_init = nn.Sequential(nn.Linear(latent_dim + 1280, hidden_dim), nn.GELU())
+        self.decoder_rnn = nn.GRU(768 + 1280, hidden_dim, num_layers, batch_first=True)
+        self.film = DeepFiLM(1280, hidden_dim)
+        self.out_proj = nn.Linear(hidden_dim, 768, bias=False)
+        self.fc_out = nn.Linear(768, vocab_size, bias=False)
         self.fc_out.weight = self.smiles_embedding_layer.weight
-        self.bos_id, self.eos_id = 1, 2
 
     @torch.no_grad()
-    def generate(self, protein_embedding, num_samples, max_len, top_k, top_p, temperature):
+    def generate(self, p, num_samples, max_len, temp, top_k, top_p):
         B = num_samples
-        pe_batch = protein_embedding.repeat(B, 1)
-        z = torch.randn(B, self.latent_dim, device=protein_embedding.device)
+        pe_batch = p.repeat(B, 1)
+        z = torch.randn(B, self.latent_dim, device=p.device)
         h = self.decoder_init(torch.cat([z, pe_batch], dim=1)).unsqueeze(0).repeat(self.num_layers, 1, 1)
-        cur = torch.full((B, 1), self.bos_id, dtype=torch.long, device=protein_embedding.device)
+        cur = torch.full((B, 1), 1, dtype=torch.long, device=p.device)
         seq = [cur]
         for _ in range(max_len):
-            out, h = self.decoder_rnn(self.smiles_embedding_layer(cur[:, -1:]), h)
-            logits = self.fc_out(self.out_proj(self.film(out, pe_batch)[:, -1, :])) / max(1e-8, temperature)
-            probs = torch.softmax(logits, dim=-1)
-            next_tok = torch.multinomial(probs, 1).squeeze(1).unsqueeze(1)
+            emb = self.smiles_embedding_layer(cur[:, -1:])
+            out, h = self.decoder_rnn(torch.cat([emb, pe_batch.unsqueeze(1)], dim=-1), h)
+            logits = self.fc_out(self.out_proj(self.film(out, pe_batch)[:, -1, :])) / temp
+            v, _ = torch.topk(logits, min(top_k, logits.size(-1)))
+            logits[logits < v[:, [-1]]] = -float('Inf')
+            probs = F.softmax(logits, dim=-1)
+            sorted_probs, sorted_idx = torch.sort(probs, descending=True)
+            cum_probs = torch.cumsum(sorted_probs, dim=-1)
+            remove = cum_probs > top_p
+            remove[..., 1:], remove[..., 0] = remove[..., :-1].clone(), 0
+            probs[remove.scatter(-1, sorted_idx, remove)] = 0.0
+            next_tok = torch.multinomial(probs / probs.sum(dim=-1, keepdim=True), 1)
             seq.append(next_tok)
             cur = torch.cat([cur, next_tok], dim=1)
-            if torch.all(next_tok.squeeze(1) == self.eos_id):
+            if (next_tok == 2).all():
                 break
         return torch.cat(seq, dim=1)
 
@@ -143,6 +139,7 @@ class BioGenesisDualModel(nn.Module):
 # ──────────────────────────────────────────────
 
 _vocab: Optional[SmilesVocabulary] = None
+_pred_vocab: Optional[dict] = None
 _gen_model: Optional[ConditionalVAE] = None
 _pred_model: Optional[BioGenesisDualModel] = None
 _esm_tokenizer = None
@@ -162,7 +159,7 @@ def _download_model_files() -> dict[str, str]:
     s = get_settings()
     
     paths = {}
-    files = [s.HF_GEN_MODEL_FILE, s.HF_PRED_MODEL_FILE, s.HF_SMILE_VOCAB_FILE]
+    files = [s.HF_GEN_MODEL_FILE, s.HF_PRED_MODEL_FILE, s.HF_GEN_VOCAB_FILE, s.HF_SMILE_VOCAB_FILE]
     for fname in files:
         logger.info("Downloading %s from %s …", fname, s.HF_GEN_MODEL_REPO)
         local = hf_hub_download(
@@ -177,7 +174,7 @@ def _download_model_files() -> dict[str, str]:
 
 def load_models():
     """Called once at app startup. Downloads and loads all models."""
-    global _vocab, _gen_model, _pred_model, _device, _models_loaded, _esm_tokenizer, _esm_model
+    global _vocab, _pred_vocab, _gen_model, _pred_model, _device, _models_loaded, _esm_tokenizer, _esm_model
 
     logger.info("Loading BioGenesis ML models …")
     _device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -188,20 +185,28 @@ def load_models():
         from core.config import get_settings
         s = get_settings()
 
-        vocab_path = paths[s.HF_SMILE_VOCAB_FILE]
+        vocab_path = paths[s.HF_GEN_VOCAB_FILE]
         gen_path = paths[s.HF_GEN_MODEL_FILE]
         pred_path = paths[s.HF_PRED_MODEL_FILE]
 
         _vocab = SmilesVocabulary()
         _vocab.load(vocab_path)
 
-        embedding = nn.Embedding(len(_vocab), 768, padding_idx=0)
-        _gen_model = ConditionalVAE(embedding, len(_vocab), 768, 1280, 768, 768, 3).to(_device)
-        _gen_model.load_state_dict(torch.load(gen_path, map_location=_device))
+        _gen_model = ConditionalVAE(len(_vocab)).to(_device)
+        gen_ckpt = torch.load(gen_path, map_location=_device)
+        _gen_model.load_state_dict(
+            {k.replace('module.', ''): v for k, v in gen_ckpt.items()}, strict=False
+        )
         _gen_model.eval()
         logger.info("Generator model loaded ✓")
 
-        _pred_model = BioGenesisDualModel(vocab_size=len(_vocab)).to(_device)
+        # Load pred vocab first (needed for BioGenesisDualModel size)
+        pred_vocab_path = paths[s.HF_SMILE_VOCAB_FILE]
+        with open(pred_vocab_path, "r") as f:
+            _pred_vocab = json.load(f)
+        logger.info("Pred vocab loaded ✓ (%d tokens)", len(_pred_vocab))
+
+        _pred_model = BioGenesisDualModel(vocab_size=len(_pred_vocab)).to(_device)
         ckpt = torch.load(pred_path, map_location=_device)
         _pred_model.load_state_dict(ckpt["model_state_dict"])
         _pred_model.eval()
@@ -247,7 +252,7 @@ def _get_esm_embedding(sequence: str) -> torch.Tensor:
 # 4. Chemistry analysis
 # ──────────────────────────────────────────────
 
-def _analyze_lead(mol) -> dict | None:
+def calculate_full_analysis(mol) -> dict | None:
     if mol is None:
         return None
     mw = Descriptors.MolWt(mol)
@@ -256,13 +261,32 @@ def _analyze_lead(mol) -> dict | None:
     hba = rdMolDescriptors.CalcNumHBA(mol)
     tpsa = Descriptors.TPSA(mol)
     qed_val = QED.qed(mol)
-    num_rot = rdMolDescriptors.CalcNumRotatableBonds(mol)
-    synt = 1.0 / (1 + num_rot + (mw / 500))
+
     violations = sum([mw > 500, logp > 5, hbd > 5, hba > 10])
+    ro5_pass = "Yes" if violations <= 1 else "No"
+
+    fsp3 = rdMolDescriptors.CalcFractionCSP3(mol)
+    num_rings = rdMolDescriptors.CalcNumRings(mol)
+    sa_score = max(1.0, min(10.0, (qed_val * 5) + (fsp3 * 2) - (num_rings * 0.5)))
+
+    hia = "High" if tpsa < 140 and logp < 5 else "Low"
+    bbb = "High" if 1 < logp < 5 and mw < 450 and tpsa < 90 else "Low"
+
+    tox_alerts = []
+    if Fragments.fr_nitro(mol) > 0: tox_alerts.append("Nitro-Groups")
+    if Fragments.fr_azo(mol) > 0: tox_alerts.append("Azo-Bonds")
+    if Fragments.fr_halogen(mol) > 3: tox_alerts.append("High-Halogen")
+    if Fragments.fr_aldehyde(mol) > 0: tox_alerts.append("Reactive-Aldehyde")
+
+    tox_status = "Safe" if not tox_alerts else "Caution"
+    tox_detail = ", ".join(tox_alerts) if tox_alerts else "None"
+
     return {
-        "MW": round(mw, 2), "LogP": round(logp, 2), "HBD": hbd, "HBA": hba,
-        "TPSA": round(tpsa, 2), "QED": round(qed_val, 4),
-        "Synthetizability": round(synt, 2), "Ro5_Pass": "Yes" if violations <= 1 else "No",
+        "MW": round(mw, 2), "LogP": round(logp, 2), "QED": round(qed_val, 4),
+        "SA_Score": round(sa_score, 2), "HIA": hia, "BBB": bbb,
+        "Toxicity": tox_status, "Tox_Detail": tox_detail,
+        "Ro5_Pass": ro5_pass, "Ro5_Violations": violations,
+        "HBD": hbd, "HBA": hba, "TPSA": round(tpsa, 2),
     }
 
 
@@ -289,12 +313,12 @@ def run_prediction(
 
     collected: list[dict] = []
     unique_pool: set[str] = set()
-    max_attempts = 30  # safety cap on generation loops
+    max_attempts = 150  # safety cap on generation loops (supports up to 300 leads)
 
     attempt = 0
     while len(collected) < num_leads and attempt < max_attempts:
         attempt += 1
-        ids = _gen_model.generate(prot_emb, 500, int(max_smiles_len) + 15, 50, 0.9, temperature)
+        ids = _gen_model.generate(prot_emb, 500, int(max_smiles_len) + 15, temperature, 50, 0.9)
         smis = [_vocab.decode(g).replace(" ", "") for g in ids]
         for s in smis:
             if not s or s in unique_pool:
@@ -304,10 +328,10 @@ def run_prediction(
             mol = Chem.MolFromSmiles(s)
             if mol is None:
                 continue
-            metrics = _analyze_lead(mol)
-            if metrics is None or metrics["QED"] < min_qed:
+            analysis = calculate_full_analysis(mol)
+            if analysis is None or analysis["QED"] < min_qed:
                 continue
-            tokens = [_vocab.token_to_idx.get(c, 0) for c in str(s)][:100]
+            tokens = [_pred_vocab.get(c, 0) for c in str(s)][:100]
             tokens += [0] * (100 - len(tokens))
             with torch.no_grad():
                 o_c, o_a = _pred_model(
@@ -319,14 +343,21 @@ def run_prediction(
             entry = {
                 "compound_id": f"Lead_{len(collected) + 1}",
                 "smiles": s,
-                "mw": metrics["MW"],
-                "logp": metrics["LogP"],
-                "hbd": metrics["HBD"],
-                "hba": metrics["HBA"],
-                "tpsa": metrics["TPSA"],
-                "qed": metrics["QED"],
-                "synthetizability": metrics["Synthetizability"],
-                "ro5_pass": metrics["Ro5_Pass"],
+                "mw": analysis["MW"],
+                "logp": analysis["LogP"],
+                "hbd": analysis["HBD"],
+                "hba": analysis["HBA"],
+                "tpsa": analysis["TPSA"],
+                "qed": analysis["QED"],
+                "sa_score": analysis["SA_Score"],
+                "hia_absorption": analysis["HIA"],
+                "bbb_permeability": analysis["BBB"],
+                "toxicity": analysis["Toxicity"],
+                "tox_detail": analysis["Tox_Detail"],
+                "ro5_pass": analysis["Ro5_Pass"],
+                "ro5_violations": analysis["Ro5_Violations"],
+                "hbd_count": analysis["HBD"],
+                "hba_count": analysis["HBA"],
                 "predicted_p_affinity": round(affinity, 3),
                 "activity_class": cls_name,
             }
@@ -340,15 +371,15 @@ def run_prediction(
 
     df = pd.DataFrame(collected).sort_values("predicted_p_affinity", ascending=False)
 
-    # Molecule grid image
-    top_n = min(12, len(df))
-    mols = [Chem.MolFromSmiles(s) for s in df.head(top_n)["smiles"]]
+    # Molecule grid image — all leads
+    all_mols = [Chem.MolFromSmiles(s) for s in df["smiles"]]
     legends = [
         f"{r['compound_id']} | pAff: {r['predicted_p_affinity']}\n{r['activity_class']}"
-        for _, r in df.head(top_n).iterrows()
+        for _, r in df.iterrows()
     ]
+    per_row = 5 if len(all_mols) > 12 else 3
     grid_img: Image.Image = Draw.MolsToGridImage(
-        mols, molsPerRow=3, subImgSize=(500, 500), legends=legends, returnPNG=False
+        all_mols, molsPerRow=per_row, subImgSize=(400, 400), legends=legends, returnPNG=False
     )
     buf = io.BytesIO()
     grid_img.save(buf, format="PNG")
@@ -368,18 +399,18 @@ def generate_structure_image(leads: list) -> str:
     if not leads:
         return ""
     try:
-        top_n = min(12, len(leads))
-        subset = leads[:top_n]
-        mols = [Chem.MolFromSmiles(r.get("smiles", "")) for r in subset]
-        mols = [m for m in mols if m is not None]
-        if not mols:
+        mols = [Chem.MolFromSmiles(r.get("smiles", "")) for r in leads]
+        valid = [(m, r) for m, r in zip(mols, leads) if m is not None]
+        if not valid:
             return ""
+        mols, valid_leads = zip(*valid)
         legends = [
             f"{r.get('compound_id', '')} | pAff: {r.get('predicted_p_affinity', '')}\n{r.get('activity_class', '')}"
-            for r in subset[:len(mols)]
+            for r in valid_leads
         ]
+        per_row = 5 if len(mols) > 12 else 3
         grid_img = Draw.MolsToGridImage(
-            mols, molsPerRow=3, subImgSize=(500, 500), legends=legends, returnPNG=False
+            list(mols), molsPerRow=per_row, subImgSize=(400, 400), legends=list(legends), returnPNG=False
         )
         buf = io.BytesIO()
         grid_img.save(buf, format="PNG")

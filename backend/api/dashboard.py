@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,9 +96,9 @@ async def get_prediction_detail(
         raise HTTPException(status_code=500, detail="Failed to decrypt results.")
 
     leads = data.get("leads", [])
-    image_base64 = data.get("image_base64", "")
-    if not image_base64 and leads:
-        image_base64 = generate_structure_image(leads)
+    # Always regenerate image from current leads — ensures all N structures are shown
+    # (old predictions stored an image capped at 12; regenerating fixes history view)
+    image_base64 = await asyncio.to_thread(generate_structure_image, leads) if leads else ""
 
     return PredictionDetail(
         id=pred.id,

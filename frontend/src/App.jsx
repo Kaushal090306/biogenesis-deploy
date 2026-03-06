@@ -3,10 +3,18 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Landing from './pages/Landing'
 import AuthPage from './pages/AuthPage'
 import DashboardPage from './pages/DashboardPage'
+import AdminPage from './pages/AdminPage'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
   return isAuthenticated ? children : <Navigate to="/login" replace />
+}
+
+function AdminRoute({ children }) {
+  const { isAuthenticated, user } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (!user?.is_admin) return <Navigate to="/dashboard" replace />
+  return children
 }
 
 function PublicRoute({ children }) {
@@ -30,6 +38,10 @@ export default function App() {
         <Route
           path="/dashboard"
           element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/admin"
+          element={<AdminRoute><AdminPage /></AdminRoute>}
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

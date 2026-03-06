@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Zap, FlaskConical, User, KeyRound, ChevronDown, X, Eye, EyeOff, RefreshCw, Pencil, Check } from 'lucide-react'
+import { LogOut, Zap, FlaskConical, User, KeyRound, ChevronDown, X, Eye, EyeOff, RefreshCw, Pencil, Check, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { changePassword, forgotPassword, resetPassword, updateUsername } from '../services/api'
 import toast from 'react-hot-toast'
@@ -327,7 +327,7 @@ export default function Navbar({ onUpgrade }) {
           <Link to="/" className="flex items-center gap-2.5">
             <span className="text-2xl">🧬</span>
             <span className="font-bold text-base tracking-tight">
-              <span className="text-gradient">PharmForge AI</span>
+              <span className="text-gradient">PharmForge</span>
               <span className="text-slate-500 font-normal text-sm"> AI</span>
             </span>
           </Link>
@@ -396,6 +396,19 @@ export default function Navbar({ onUpgrade }) {
                           <KeyRound size={14} className="text-brand-400" />
                           Change Password
                         </button>
+                        {user?.is_admin && (
+                          <>
+                            <div className="border-t border-white/[0.05]" />
+                            <Link
+                              to="/admin"
+                              onClick={() => setMenuOpen(false)}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-amber-400 hover:bg-amber-900/20 hover:text-amber-300 transition-colors"
+                            >
+                              <ShieldCheck size={14} />
+                              Admin Panel
+                            </Link>
+                          </>
+                        )}
                         <div className="border-t border-white/[0.05]" />
                         <button
                           onClick={handleLogout}

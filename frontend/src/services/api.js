@@ -74,4 +74,19 @@ export const resetPassword = (email, otp, new_password) =>
 // ── Health ──
 export const healthCheck = () => api.get('/health')
 
+// ── Admin ──
+export const adminGetUsers = (page = 1, pageSize = 20, search = '') =>
+  api.get('/admin/users', { params: { page, page_size: pageSize, search } })
+
+export const adminGetUser = (id) => api.get(`/admin/users/${id}`)
+
+export const adminEditUser = (id, data) => api.patch(`/admin/users/${id}`, data)
+
+export const adminDeleteUser = (id) => api.delete(`/admin/users/${id}`)
+
+export const adminGetPredictions = (page = 1, pageSize = 20, userId = 0) =>
+  api.get('/admin/predictions', { params: { page, page_size: pageSize, user_id: userId } })
+
+export const adminGetPrediction = (id) => api.get(`/admin/predictions/${id}`)
+
 export default api

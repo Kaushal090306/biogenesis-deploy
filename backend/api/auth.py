@@ -41,13 +41,13 @@ def _generate_otp(length: int = 6) -> str:
 def _send_email_sync(to_email: str, otp: str) -> None:
     """Synchronous SMTP send — called via asyncio.to_thread."""
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Your BioGenesis verification code"
-    msg["From"] = f"BioGenesis <{settings.SMTP_USER}>"
+    msg["Subject"] = "Your PharmForge AI verification code"
+    msg["From"] = f"PharmForge AI <{settings.SMTP_USER}>"
     msg["To"] = to_email
 
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
-      <h2 style="color:#38bdf8;margin-bottom:8px;">BioGenesis</h2>
+      <h2 style="color:#38bdf8;margin-bottom:8px;">PharmForge AI</h2>
       <p style="color:#94a3b8;">Your one-time verification code:</p>
       <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
       <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. Do not share this code.</p>
@@ -65,13 +65,13 @@ def _send_email_sync(to_email: str, otp: str) -> None:
 def _send_reset_email_sync(to_email: str, otp: str) -> None:
     """Send password reset OTP email."""
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Reset your BioGenesis password"
-    msg["From"] = f"BioGenesis <{settings.SMTP_USER}>"
+    msg["Subject"] = "Reset your PharmForge AI password"
+    msg["From"] = f"PharmForge AI <{settings.SMTP_USER}>"
     msg["To"] = to_email
 
     html = f"""
     <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
-      <h2 style="color:#f87171;margin-bottom:8px;">BioGenesis — Password Reset</h2>
+      <h2 style="color:#f87171;margin-bottom:8px;">PharmForge AI — Password Reset</h2>
       <p style="color:#94a3b8;">We received a request to reset the password for this account.</p>
       <p style="color:#94a3b8;">Use the code below to reset your password:</p>
       <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
@@ -87,16 +87,53 @@ def _send_reset_email_sync(to_email: str, otp: str) -> None:
         smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
 
 
+def _send_welcome_email_sync(to_email: str, username: str) -> None:
+    """Send welcome email after successful account creation."""
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Welcome to PharmForge AI 🧬"
+    msg["From"] = f"PharmForge AI <{settings.SMTP_USER}>"
+    msg["To"] = to_email
+
+    name = username or to_email.split("@")[0]
+    html = f"""
+    <div style="font-family:sans-serif;max-width:520px;margin:auto;padding:32px 24px;background:#0f172a;color:#e2e8f0;border-radius:10px;">
+      <h1 style="color:#38bdf8;margin-bottom:4px;font-size:24px;">Welcome to PharmForge AI</h1>
+      <p style="color:#94a3b8;margin-top:0;">The next-generation drug discovery platform powered by AI.</p>
+      <hr style="border:none;border-top:1px solid #1e293b;margin:20px 0;">
+      <p style="color:#e2e8f0;">Hi <strong>{name}</strong>,</p>
+      <p style="color:#94a3b8;">Your account is now active. Here's what you can do right away:</p>
+      <ul style="color:#94a3b8;padding-left:20px;line-height:1.8;">
+        <li>🔬 Generate de novo drug candidates from any protein sequence</li>
+        <li>⚗️ Get full ADMET &amp; toxicity profiling for every lead</li>
+        <li>📊 Download comprehensive discovery reports in CSV format</li>
+      </ul>
+      <div style="margin:24px 0;">
+        <a href="http://localhost:5173" style="background:#38bdf8;color:#0f172a;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Open PharmForge AI →</a>
+      </div>
+      <p style="color:#64748b;font-size:12px;">You have <strong style="color:#e2e8f0;">{settings.FREE_TOKENS} free prediction tokens</strong> to get started. Upgrade anytime for unlimited access.</p>
+      <hr style="border:none;border-top:1px solid #1e293b;margin:20px 0;">
+      <p style="color:#475569;font-size:11px;">PharmForge AI · pharmforgeai@gmail.com</p>
+    </div>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
+
+
 def _send_password_changed_email_sync(to_email: str) -> None:
     """Send password-changed confirmation email."""
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Your BioGenesis password has been changed"
-    msg["From"] = f"BioGenesis <{settings.SMTP_USER}>"
+    msg["Subject"] = "Your PharmForge AI password has been changed"
+    msg["From"] = f"PharmForge AI <{settings.SMTP_USER}>"
     msg["To"] = to_email
 
     html = """
     <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
-      <h2 style="color:#34d399;margin-bottom:8px;">BioGenesis — Password Changed</h2>
+      <h2 style="color:#34d399;margin-bottom:8px;">PharmForge AI — Password Changed</h2>
       <p style="color:#94a3b8;">Your account password was successfully changed.</p>
       <p style="color:#94a3b8;">If you made this change, no further action is needed.</p>
       <p style="color:#f87171;font-size:12px;">If you did not change your password, please contact our support immediately.</p>
@@ -126,6 +163,16 @@ async def _send_reset_otp_email(to_email: str, otp: str) -> None:
         raise RuntimeError("SMTP credentials not configured on server.")
     await asyncio.to_thread(_send_reset_email_sync, to_email, otp)
     logger.info("Password reset OTP sent to %s", to_email)
+
+
+async def _send_welcome_email(to_email: str, username: str) -> None:
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        return
+    try:
+        await asyncio.to_thread(_send_welcome_email_sync, to_email, username)
+        logger.info("Welcome email sent to %s", to_email)
+    except Exception as exc:
+        logger.warning("Failed to send welcome email to %s: %s", to_email, exc)
 
 
 async def _send_password_changed_email(to_email: str) -> None:
@@ -226,6 +273,8 @@ async def verify_otp(payload: VerifyOtpRequest, db: AsyncSession = Depends(get_d
     await db.commit()
     await db.refresh(user)
 
+    asyncio.create_task(_send_welcome_email(user.email, user.username or ""))
+
     token = create_access_token(str(user.id))
     logger.info("Email verified for user: %s", user.email)
     return TokenResponse(access_token=token, user=UserPublic.model_validate(user))
@@ -303,6 +352,7 @@ async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get
         await db.commit()
         await db.refresh(user)
         logger.info("New Google user registered: %s", user.email)
+        asyncio.create_task(_send_welcome_email(user.email, user.username or ""))
 
     token = create_access_token(str(user.id))
     return TokenResponse(access_token=token, user=UserPublic.model_validate(user))

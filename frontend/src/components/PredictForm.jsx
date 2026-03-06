@@ -10,16 +10,22 @@ const SLIDER_CONFIG = [
   { key: 'temperature', label: 'Generation Temperature', min: 0.1, max: 2.0, step: 0.05, default: 0.8, desc: 'Controls diversity. Higher = more creative molecules.' },
   { key: 'min_smiles_len', label: 'Min SMILES Length', min: 10, max: 100, step: 1, default: 40, desc: 'Minimum molecule size.' },
   { key: 'max_smiles_len', label: 'Max SMILES Length', min: 50, max: 200, step: 1, default: 100, desc: 'Maximum molecule size.' },
-  { key: 'num_leads', label: 'Number of Leads', min: 1, max: 50, step: 1, default: 9, desc: 'How many drug candidates to generate.' },
+  { key: 'num_leads', label: 'Number of Leads', min: 1, max: 300, step: 1, default: 9, desc: 'How many drug candidates to generate.' },
 ]
 
-export default function PredictForm({ onResult, onTokensExhausted, userTokens, onClearResult }) {
+const FREE_LEADS_MAX = 10
+const PRO_LEADS_MAX = 300
+
+export default function PredictForm({ onResult, onTokensExhausted, userTokens, userPlan = 'free', onClearResult, onUpgrade }) {
   const [sequence, setSequence] = useState('')
   const [params, setParams] = useState(
     Object.fromEntries(SLIDER_CONFIG.map((s) => [s.key, s.default]))
   )
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
+
+  const isPro = userPlan && userPlan !== 'free'
+  const maxLeads = isPro ? PRO_LEADS_MAX : FREE_LEADS_MAX
 
   function setParam(key, val) {
     setParams((p) => ({ ...p, [key]: parseFloat(val) }))
@@ -75,6 +81,9 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, o
       if (err.response?.status === 402) {
         onTokensExhausted()
         toast.error('No tokens remaining. Please upgrade your plan.')
+      } else if (err.response?.status === 403) {
+        toast.error(err.response?.data?.detail || 'Lead limit reached for your plan. Upgrade to Pro.')
+        onUpgrade?.()
       } else if (err.response?.status === 429) {
         toast.error('Rate limit reached. Please wait a minute.')
       } else if (err.response?.status === 422) {
@@ -143,10 +152,27 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, o
 
         {/* Row 2: Sliders in 2 rows (3 + 2) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          {SLIDER_CONFIG.map((s) => (
-            <SliderField key={s.key} config={s} value={params[s.key]} onChange={(v) => setParam(s.key, v)} />
-          ))}
+          {SLIDER_CONFIG.map((s) => {
+            const cfg = s.key === 'num_leads' ? { ...s, max: maxLeads } : s
+            return (
+              <SliderField
+                key={s.key}
+                config={cfg}
+                value={Math.min(params[s.key], cfg.max)}
+                onChange={(v) => setParam(s.key, v)}
+              />
+            )
+          })}
         </div>
+        {!isPro && (
+          <p className="text-xs text-amber-500/80 -mt-2">
+            Free tier: max {FREE_LEADS_MAX} leads per run.{' '}
+            <button type="button" onClick={onUpgrade} className="underline hover:text-amber-400 transition-colors">
+              Upgrade to Pro
+            </button>{' '}
+            for up to {PRO_LEADS_MAX}.
+          </p>
+        )}
 
         {/* Row 3: Submit */}
         <button
