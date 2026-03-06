@@ -141,8 +141,8 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, o
           </span>
         </div>
 
-        {/* Row 2: All sliders in one horizontal row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        {/* Row 2: Sliders in 2 rows (3 + 2) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {SLIDER_CONFIG.map((s) => (
             <SliderField key={s.key} config={s} value={params[s.key]} onChange={(v) => setParam(s.key, v)} />
           ))}

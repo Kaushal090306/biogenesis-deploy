@@ -48,6 +48,8 @@ export const runPrediction = (sequence, params) =>
 // ── Dashboard ──
 export const getProfile = () => api.get('/dashboard/me')
 
+export const updateUsername = (username) => api.patch('/dashboard/username', { username })
+
 export const getHistory = (page = 1, pageSize = 10) =>
   api.get('/dashboard/history', { params: { page, page_size: pageSize } })
 

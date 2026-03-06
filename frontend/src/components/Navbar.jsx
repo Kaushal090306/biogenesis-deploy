@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Zap, FlaskConical, User, KeyRound, ChevronDown, X, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { LogOut, Zap, FlaskConical, User, KeyRound, ChevronDown, X, Eye, EyeOff, RefreshCw, Pencil, Check } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { changePassword, forgotPassword, resetPassword } from '../services/api'
+import { changePassword, forgotPassword, resetPassword, updateUsername } from '../services/api'
 import toast from 'react-hot-toast'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -185,13 +185,34 @@ function ChangePasswordModal({ user, onClose }) {
   )
 }
 
-function ProfileModal({ user, onClose, onChangePassword }) {
+function ProfileModal({ user, onClose, onChangePassword, onUsernameUpdate }) {
   const PLAN_COLOR = {
     enterprise: 'text-purple-300 bg-purple-900/30 border-purple-700/30',
     pro: 'text-sky-300 bg-sky-900/30 border-sky-700/30',
     free: 'text-slate-300 bg-slate-800/50 border-slate-700/30',
   }
   const planStyle = PLAN_COLOR[user?.plan] || PLAN_COLOR.free
+
+  const [editingUsername, setEditingUsername] = useState(false)
+  const [usernameVal, setUsernameVal] = useState(user?.username || '')
+  const [savingUsername, setSavingUsername] = useState(false)
+
+  async function handleSaveUsername() {
+    const trimmed = usernameVal.trim()
+    if (!trimmed || trimmed.length < 2) { toast.error('Username must be at least 2 characters.'); return }
+    if (trimmed === user?.username) { setEditingUsername(false); return }
+    setSavingUsername(true)
+    try {
+      const res = await updateUsername(trimmed)
+      onUsernameUpdate(res.data)
+      setEditingUsername(false)
+      toast.success('Username updated!')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update username.')
+    } finally {
+      setSavingUsername(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -209,7 +230,40 @@ function ProfileModal({ user, onClose, onChangePassword }) {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-700 to-brand-900 border border-brand-600/40 flex items-center justify-center mb-3 text-2xl font-bold text-white">
             {(user?.username?.[0] || user?.email?.[0])?.toUpperCase() ?? '?'}
           </div>
-          <p className="font-semibold text-white text-base">{user?.username || user?.email?.split('@')[0]}</p>
+
+          {/* Editable username */}
+          {editingUsername ? (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <input
+                autoFocus
+                value={usernameVal}
+                onChange={e => setUsernameVal(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleSaveUsername(); if (e.key === 'Escape') setEditingUsername(false) }}
+                maxLength={50}
+                className="bg-transparent border-b border-brand-600/70 text-white font-semibold text-base outline-none text-center w-40 pb-0.5"
+              />
+              <button onClick={handleSaveUsername} disabled={savingUsername}
+                className="text-brand-400 hover:text-brand-300 transition-colors">
+                {savingUsername
+                  ? <span className="w-3.5 h-3.5 border border-brand-400/40 border-t-brand-400 rounded-full animate-spin inline-block" />
+                  : <Check size={14} />}
+              </button>
+              <button onClick={() => setEditingUsername(false)} className="text-slate-500 hover:text-slate-300 transition-colors">
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <p className="font-semibold text-white text-base">{user?.username || user?.email?.split('@')[0]}</p>
+              <button
+                onClick={() => { setUsernameVal(user?.username || ''); setEditingUsername(true) }}
+                className="text-slate-500 hover:text-brand-400 transition-colors"
+              >
+                <Pencil size={12} />
+              </button>
+            </div>
+          )}
+
           <p className="text-xs text-slate-500 mt-0.5">{user?.email}</p>
         </div>
 
@@ -243,7 +297,7 @@ function ProfileModal({ user, onClose, onChangePassword }) {
 }
 
 export default function Navbar({ onUpgrade }) {
-  const { user, logout } = useAuth()
+  const { user, logout, updateUser } = useAuth()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
@@ -367,6 +421,7 @@ export default function Navbar({ onUpgrade }) {
             user={user}
             onClose={() => setShowProfile(false)}
             onChangePassword={() => { setShowProfile(false); setShowChangePass(true) }}
+            onUsernameUpdate={(updated) => updateUser(updated)}
           />
         )}
         {showChangePass && (
