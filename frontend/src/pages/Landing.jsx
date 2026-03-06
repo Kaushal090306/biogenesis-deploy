@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { WavyBackground } from '@/components/ui/wavy-background'
 import {
   ArrowRight, Shield, Zap, Database, FlaskConical, Lock, ChevronRight,
-  CheckCircle2, Star, BarChart3, Clock, Dna, Microscope, Target, ChevronDown,
+  CheckCircle2, Star, BarChart3, Clock, Dna, Microscope, Target, ChevronDown, Menu, X,
 } from 'lucide-react'
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -173,6 +173,7 @@ const fadeUp = {
 
 export default function Landing() {
   const [annual, setAnnual] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <WavyBackground
@@ -188,20 +189,24 @@ export default function Landing() {
 
       {/* ── Navbar ── */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-surface-900/80 backdrop-blur-xl border-b border-white/[0.05]">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-3">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <a href="/" className="flex items-center gap-2 sm:gap-3">
             <span className="text-2xl">🧬</span>
-            <span className="font-bold text-lg tracking-tight">
+            <span className="font-bold text-base sm:text-lg tracking-tight">
               <span className="text-gradient">BioGenesis</span>
               <span className="text-slate-400 font-normal"> AI</span>
             </span>
           </a>
+
+          {/* Desktop nav links */}
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
             <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
             <a href="#features" className="hover:text-white transition-colors">Features</a>
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Desktop CTA */}
+          <div className="hidden md:flex items-center gap-4">
             <Link to="/login" className="text-slate-400 hover:text-white text-sm font-medium transition-colors">
               Sign In
             </Link>
@@ -209,11 +214,49 @@ export default function Landing() {
               Get Started Free
             </Link>
           </div>
+
+          {/* Mobile: sign in + hamburger */}
+          <div className="flex md:hidden items-center gap-1">
+            <Link to="/login" className="text-slate-400 hover:text-white text-sm font-medium px-3 py-2 transition-colors">
+              Sign In
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(o => !o)}
+              className="p-2 text-slate-400 hover:text-white transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile menu dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-surface-900/98 backdrop-blur-xl border-t border-white/[0.06] px-4 py-3 space-y-1">
+            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}
+               className="block px-3 py-2.5 text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-xl text-sm transition-colors">
+              How it works
+            </a>
+            <a href="#features" onClick={() => setMobileMenuOpen(false)}
+               className="block px-3 py-2.5 text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-xl text-sm transition-colors">
+              Features
+            </a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)}
+               className="block px-3 py-2.5 text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-xl text-sm transition-colors">
+              Pricing
+            </a>
+            <div className="pt-2 pb-1 border-t border-white/[0.06]">
+              <Link to="/register" onClick={() => setMobileMenuOpen(false)}
+                    className="btn-primary block text-center text-sm py-2.5 mt-2">
+                Get Started Free
+              </Link>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* ── Hero ── */}
-      <section className="pt-28 pb-16 px-6">
+      <section className="pt-24 sm:pt-28 pb-12 sm:pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
@@ -234,7 +277,7 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.7 }}
-                className="text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight mb-5"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight mb-5"
               >
                 <span className="text-gradient">AI-Powered</span>
                 <br />
@@ -247,7 +290,7 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.7 }}
-                className="text-lg text-slate-400 mb-8 leading-relaxed max-w-xl"
+                className="text-base sm:text-lg text-slate-400 mb-8 leading-relaxed max-w-xl"
               >
                 Input a protein sequence. Get ranked drug candidates with binding affinities,
                 QED scores, Lipinski compliance, and 2D structures   in under 60 seconds.
@@ -293,7 +336,7 @@ export default function Landing() {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3, duration: 0.8 }}
-              className="relative"
+              className="relative hidden sm:block"
             >
               {/* Glow */}
               <div className="absolute -inset-3 bg-brand-600/10 rounded-3xl blur-2xl pointer-events-none" />
@@ -426,7 +469,7 @@ export default function Landing() {
       </section>
 
       {/* ── How it works ── */}
-      <section id="how-it-works" className="py-24 px-6 border-t border-white/[0.04]">
+      <section id="how-it-works" className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
           <motion.div
             className="text-center mb-16"
@@ -468,32 +511,12 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Pipeline strip ── */}
-      <section className="py-12 px-6 bg-surface-800/40 border-y border-white/[0.04]">
-        <div className="max-w-7xl mx-auto">
-          <p className="text-center text-xs text-slate-500 uppercase tracking-widest font-semibold mb-8">
-            Inference Pipeline
-          </p>
-          <div className="flex items-center justify-center gap-2 overflow-x-auto pb-1 flex-nowrap">
-            {PIPELINE_STEPS.map((step, i) => (
-              <div key={step} className="flex items-center gap-2 flex-shrink-0">
-                <div className="glass-card px-3 py-2 text-sm font-medium text-brand-300 border border-brand-800/40 whitespace-nowrap">
-                  <span className="text-slate-500 text-xs mr-1.5">{String(i + 1).padStart(2, '0')}</span>
-                  {step}
-                </div>
-                {i < PIPELINE_STEPS.length - 1 && (
-                  <ChevronRight size={14} className="text-slate-600 flex-shrink-0" />
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* ── Features ── */}
-      <section id="features" className="py-24 border-b border-white/[0.04]">
+      <section id="features" className="py-16 sm:py-24 border-b border-white/[0.04]">
         {/* Heading — keep centred inside normal max-width */}
-        <div className="max-w-6xl mx-auto px-6 text-center mb-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center mb-10 sm:mb-16">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -512,11 +535,11 @@ export default function Landing() {
 
         {/* Full-viewport rail — no max-width, no horizontal padding */}
         <div className="overflow-hidden w-screen" style={{ marginLeft: 'calc(50% - 50vw)' }}>
-          <div className="flex gap-4 py-3 rail-track" style={{ width: 'max-content' }}>
+          <div className="flex gap-3 sm:gap-4 py-3 rail-track" style={{ width: 'max-content' }}>
             {[...FEATURES, ...FEATURES].map((f, i) => (
               <div
                 key={i}
-                style={{ width: '400px', minHeight: '260px', flexShrink: 0 }}
+                style={{ width: 'min(85vw, 340px)', minHeight: '240px', flexShrink: 0 }}
                 className={`glass-card p-8 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col`}
               >
                 <div className="flex items-start justify-between mb-5">
@@ -536,7 +559,7 @@ export default function Landing() {
       </section>
 
       {/* ── Tech stack ── */}
-      <section className="py-14 px-6 border-b border-white/[0.04]">
+      <section className="py-10 sm:py-14 px-4 sm:px-6 border-b border-white/[0.04]">
         <div className="max-w-5xl mx-auto text-center">
           <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-8">
             Powered by world-class technology
@@ -556,8 +579,8 @@ export default function Landing() {
       </section>
 
       {/* ── Security ── */}
-      <section className="py-14 px-6 border-b border-white/[0.04]">
-        <div className="max-w-4xl mx-auto glass-card p-8 border border-brand-900/40 bg-gradient-to-br from-brand-900/20 to-transparent">
+      <section className="py-10 sm:py-14 px-4 sm:px-6 border-b border-white/[0.04]">
+        <div className="max-w-4xl mx-auto glass-card p-5 sm:p-8 border border-brand-900/40 bg-gradient-to-br from-brand-900/20 to-transparent">
           <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
             <div className="p-5 bg-brand-900/50 rounded-2xl border border-brand-700/30 flex-shrink-0">
               <Lock size={36} className="text-brand-400" />
@@ -582,7 +605,7 @@ export default function Landing() {
       </section>
 
       {/* ── Testimonials ── */}
-      <section className="py-24 px-6 border-b border-white/[0.04]">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
             <motion.div
@@ -632,7 +655,7 @@ export default function Landing() {
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="py-24 px-6 border-b border-white/[0.04]">
+      <section id="pricing" className="py-16 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-14">
             <motion.div
@@ -723,22 +746,22 @@ export default function Landing() {
       </section>
 
       {/* ── CTA Banner ── */}
-      <section className="py-20 px-6">
+      <section className="py-14 sm:py-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass-card p-12 border border-brand-700/30 bg-gradient-to-br from-brand-900/30 to-violet-900/20 relative overflow-hidden text-center"
+            className="glass-card p-7 sm:p-10 md:p-12 border border-brand-700/30 bg-gradient-to-br from-brand-900/30 to-violet-900/20 relative overflow-hidden text-center"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-600/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
             <div className="relative">
               <div className="text-4xl mb-4">🧬</div>
-              <h2 className="text-3xl md:text-4xl font-extrabold mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4">
                 Ready to accelerate discovery?
               </h2>
-              <p className="text-slate-400 text-lg mb-8 max-w-xl mx-auto">
+              <p className="text-slate-400 text-base sm:text-lg mb-8 max-w-xl mx-auto">
                 Join researchers worldwide. Your first 10 runs are completely free   no credit card required.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -756,7 +779,7 @@ export default function Landing() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="border-t border-white/[0.04] py-12 px-6">
+      <footer className="border-t border-white/[0.04] py-10 sm:py-12 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
             <div className="md:col-span-2">
