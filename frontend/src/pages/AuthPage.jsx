@@ -27,7 +27,7 @@ function AuthShell({ children }) {
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <span className="text-3xl">🧬</span>
             <span className="font-bold text-xl tracking-tight">
-              <span className="text-gradient">BioGenesis</span>
+              <span className="text-gradient">PharmForge AI</span>
               <span className="text-slate-400 font-normal"> AI</span>
             </span>
           </Link>
@@ -207,7 +207,7 @@ export default function AuthPage({ mode }) {
     try {
       const res = await verifyOtp(otpEmail, otp)
       saveAuth(res.data.access_token, res.data.user)
-      toast.success('Email verified! Welcome to BioGenesis.')
+      toast.success('Email verified! Welcome to PharmForge AI.')
       navigate('/dashboard')
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Verification failed.')

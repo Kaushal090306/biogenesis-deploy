@@ -3,89 +3,90 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { WavyBackground } from '@/components/ui/wavy-background'
 import {
-  ArrowRight, Shield, Zap, Database, FlaskConical, Lock, ChevronRight,
-  CheckCircle2, Star, BarChart3, Clock, Dna, Microscope, Target, ChevronDown, Menu, X,
+  ArrowRight, Shield, Zap, Database, FlaskConical, ChevronRight,
+  CheckCircle2, Star, BarChart3, Target, ChevronDown, Menu, X,
 } from 'lucide-react'
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const FEATURES = [
   {
-    icon: FlaskConical,
-    title: 'De Novo Generation',
-    desc: 'Conditional VAE generates novel SMILES molecules conditioned on your protein target   ranked by predicted binding affinity.',
-    color: 'from-brand-600/20 to-brand-800/10',
-    border: 'border-brand-700/30',
-    tag: 'CVAE · ESM2',
+    icon: BarChart3,
+    title: 'Dynamic Volume Scaling',
+    desc: 'Custom Lead Counts: Forge exactly what you need — from 5 high-priority candidates to libraries of 500+ leads for expanded screening.',
+    color: 'from-sky-600/20 to-sky-900/10',
+    border: 'border-sky-700/30',
+    tag: 'Custom Counts',
+  },
+  {
+    icon: Target,
+    title: 'Dimensional Precision',
+    desc: 'Targeted SMILES Length: Define exact Min/Max character limits to match the specific volume of your target protein’s binding pocket.',
+    color: 'from-emerald-600/20 to-emerald-900/10',
+    border: 'border-emerald-700/30',
+    tag: 'SMILES Length',
   },
   {
     icon: Zap,
-    title: 'Dual-Engine Prediction',
-    desc: 'Simultaneously predict activity class (Inhibitor/Activator) and pAffinity score for every generated candidate.',
+    title: 'Innovation Control',
+    desc: 'Generative Temperature Tuning: Adjust the "Innovation Dial" — lower temperatures for stable leads, higher to explore novel chemical space.',
     color: 'from-violet-600/20 to-violet-900/10',
     border: 'border-violet-700/30',
-    tag: 'Gradient Boosting',
+    tag: 'Temperature Tuning',
   },
   {
-    icon: Shield,
-    title: 'Lipinski Filtering',
-    desc: 'Auto-apply Rule-of-5 compliance, QED scoring, TPSA, and synthesizability metrics to prioritize drug-like leads.',
+    icon: CheckCircle2,
+    title: 'Integrated Quality Gates',
+    desc: 'QED-Based Filtering: Set a baseline for drug-likeness so the model only forges molecules that meet your pharmaceutical quality standards.',
     color: 'from-rose-600/20 to-rose-900/10',
     border: 'border-rose-700/30',
-    tag: 'RDKit · SA Score',
+    tag: 'QED Filter',
   },
   {
-    icon: Database,
-    title: 'Encrypted Results',
-    desc: 'All discovery outputs (SMILES, affinities, structures) are Fernet-encrypted and securely stored per-user.',
-    color: 'from-amber-600/20 to-amber-900/10',
-    border: 'border-amber-700/30',
-    tag: 'AES-256 · JWT',
-  },
-  {
-    icon: BarChart3,
-    title: 'Ranked Leads Dashboard',
-    desc: 'Interactive dashboard with sortable metrics, 2D structure previews, and one-click CSV export for downstream analysis.',
-    color: 'from-sky-600/20 to-sky-900/10',
-    border: 'border-sky-700/30',
-    tag: 'React · RDKit.js',
-  },
-  {
-    icon: Clock,
-    title: 'Sub-60s Inference',
-    desc: 'Optimized GPU inference pipeline delivers ranked drug candidate lists in under 60 seconds for any protein target.',
-    color: 'from-emerald-600/20 to-emerald-900/10',
-    border: 'border-emerald-700/30',
-    tag: 'CUDA · Triton',
+    icon: FlaskConical,
+    title: 'Docking-Ready Fidelity',
+    desc: 'Validated Chemical Objects: Every output is a strictly valid RDKit object, ready for immediate 3D coordinate generation and docking simulations.',
+    color: 'from-brand-600/20 to-brand-800/10',
+    border: 'border-brand-700/30',
+    tag: 'RDKit Ready',
   },
 ]
 
-const STEPS = [
+// Additional detail cards for the "How it works" section
+const HOW_DETAILS = [
   {
-    number: '01',
-    icon: Dna,
-    title: 'Input Your Target',
-    desc: 'Paste a protein sequence in FASTA or raw amino acid format. Our pipeline accepts any length with full ESM2 context windows.',
-    color: 'text-brand-400',
-    bg: 'bg-brand-900/40 border-brand-700/40',
+    icon: Star,
+    title: 'Novel Chemical Scaffolds',
+    desc: 'Forge unique, non-obvious chemical entities that provide a clear path for IPR and patent protection in unexplored chemical spaces.',
   },
   {
-    number: '02',
-    icon: Microscope,
-    title: 'AI Generates Leads',
-    desc: 'Our Conditional VAE encodes the protein embedding and decodes novel SMILES candidates. RDKit filters for drug-likeness in real time.',
-    color: 'text-violet-400',
-    bg: 'bg-violet-900/40 border-violet-700/40',
+    icon: BarChart3,
+    title: 'pAffinity Forecasting',
+    desc: 'Utilize the v17 predictive engine to rank every generated lead by its statistical probability of binding strength before running a docking job.',
   },
   {
-    number: '03',
-    icon: Target,
-    title: 'Review & Export',
-    desc: 'Ranked candidates appear in your dashboard with pAffinity, QED, TPSA, and 2D structure previews. Export to CSV with one click.',
-    color: 'text-rose-400',
-    bg: 'bg-rose-900/40 border-rose-700/40',
+    icon: Shield,
+    title: 'Advanced Toxicity Profiling',
+    desc: 'Proactively identify risk with fragment-based screening for Nitro-groups, Azo-bonds, and other reactive toxicophores.',
+  },
+  {
+    icon: CheckCircle2,
+    title: 'Synthesisability (SA) Metrics',
+    desc: 'Prioritize lab resources with a realistic SA Score estimating the complexity of bringing your in silico design to the bench.',
+  },
+  {
+    icon: Shield,
+    title: 'Lipinski Rule-of-5 Audit',
+    desc: 'Get a granular breakdown of Molecular Weight, LogP, HBD, and HBA to ensure leads are optimized for oral bioavailability.',
+  },
+  {
+    icon: Database,
+    title: 'Unified Discovery Reports',
+    desc: 'Receive a consolidated .CSV containing 17+ physicochemical and ADMET parameters, streamlining transitions into AutoDock Vina or Schrödinger.',
   },
 ]
+
+// NOTE: STEPS removed per UX request (first three How-it-Works cards hidden)
 
 const PLANS = [
   {
@@ -128,7 +129,7 @@ const TESTIMONIALS = [
     institution: 'Stanford University',
     avatar: 'SC',
     color: 'from-brand-700 to-brand-500',
-    quote: 'BioGenesis AI reduced our hit-to-lead identification from months to hours. The ESM2-powered embeddings capture structural context that traditional ECFP fingerprints miss entirely.',
+    quote: 'PharmForge AI reduced our hit-to-lead identification from months to hours. The ESM2-powered embeddings capture structural context that traditional ECFP fingerprints miss entirely.',
     stars: 5,
   },
   {
@@ -137,7 +138,7 @@ const TESTIMONIALS = [
     institution: 'ETH Zürich',
     avatar: 'MW',
     color: 'from-violet-700 to-violet-500',
-    quote: 'We integrated BioGenesis into our KRAS G12C campaign and surfaced 3 novel scaffolds our internal DFT pipeline had overlooked. Remarkable tool for early-stage discovery.',
+    quote: 'We integrated PharmForge AI into our KRAS G12C campaign and surfaced 3 novel scaffolds our internal DFT pipeline had overlooked. Remarkable tool for early-stage discovery.',
     stars: 5,
   },
   {
@@ -212,10 +213,10 @@ export default function Landing() {
           <a href="/" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="relative">
               <div className="absolute inset-0 bg-brand-500/30 rounded-full blur-md group-hover:bg-brand-400/50 transition-all duration-300" />
-              <img src="/dna.svg" alt="BioGenesis" className="relative w-8 h-8" />
+              <img src="/dna.svg" alt="PharmForge AI" className="relative w-8 h-8" />
             </div>
-            <div className="flex flex-col leading-none">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight text-gradient">BioGenesis</span>
+              <div className="flex flex-col leading-none">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-gradient">PharmForge AI</span>
               <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase">Drug Discovery AI</span>
             </div>
           </a>
@@ -337,23 +338,20 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.7 }}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.1] tracking-tight mb-5"
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight mb-5"
               >
-                <span className="text-gradient">AI-Powered</span>
+                <span className="text-gradient">PharmForge AI:</span>
                 <br />
-                Drug Discovery.
-                <br />
-                <span className="text-slate-300">In seconds.</span>
+                High-Velocity Molecular Engineering for Targeted Discovery.
               </motion.h1>
 
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2, duration: 0.7 }}
-                className="text-base sm:text-lg text-slate-400 mb-8 leading-relaxed max-w-xl"
+                className="text-base sm:text-lg text-slate-300 mb-8 leading-relaxed max-w-xl"
               >
-                Input a protein sequence. Get ranked drug candidates with binding affinities,
-                QED scores, Lipinski compliance, and 2D structures   in under 60 seconds.
+                A precision de novo design suite providing researchers with total control over lead novelty, physicochemical properties, and ADMET-readiness for downstream in silico validation.
               </motion.p>
 
               <motion.div
@@ -412,9 +410,9 @@ export default function Landing() {
                     <div className="w-3 h-3 rounded-full bg-brand-500/80" />
                   </div>
                   <div className="flex-1 flex justify-center">
-                    <div className="flex items-center gap-2 bg-surface-900/60 border border-white/[0.07] rounded-lg px-3 py-1 text-xs text-slate-500 font-mono w-48 justify-center">
+                      <div className="flex items-center gap-2 bg-surface-900/60 border border-white/[0.07] rounded-lg px-3 py-1 text-xs text-slate-500 font-mono w-48 justify-center">
                       <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-                      app.biogenesis.ai
+                      app.pharmforge.ai
                     </div>
                   </div>
                 </div>
@@ -511,22 +509,10 @@ export default function Landing() {
           </div>
 
           {/* Stats strip */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.7 }}
-            className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4"
-          >
-            {STATS.map((s) => (
-              <div key={s.label} className="glass-card p-5 text-center hover:border-brand-700/40 transition-colors">
-                <div className="text-2xl font-bold text-gradient">{s.value}</div>
-                <div className="text-xs text-slate-500 mt-1 font-medium">{s.label}</div>
-              </div>
-            ))}
-          </motion.div>
         </div>
       </section>
+
+      
 
       {/* ── How it works ── */}
       <section id="how-it-works" className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/[0.04]">
@@ -543,30 +529,22 @@ export default function Landing() {
               Workflow
               <span className="w-6 h-px bg-brand-600" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">How BioGenesis works</h2>
-            <p className="text-slate-400 max-w-xl mx-auto">Three steps from protein target to ranked drug candidates</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">How PharmForge AI works</h2>
+            <p className="text-slate-300 max-w-xl mx-auto text-base">Three steps from protein target to ranked drug candidates</p>
           </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {STEPS.map((step, i) => (
-              <motion.div
-                key={step.number}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-              >
-                <div className={`glass-card p-7 border ${step.bg} h-full`}>
-                  <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl border ${step.bg} mb-5`}>
-                    <step.icon size={24} className={step.color} />
+          {/* First three step cards removed to simplify workflow UI */}
+          <div className="mt-10 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {HOW_DETAILS.map((d, i) => (
+                <div key={i} className="glass-card p-5 border-white/[0.04] h-full">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/[0.03] mb-3">
+                    <d.icon size={18} className="text-brand-400" />
                   </div>
-                  <div className={`text-xs font-bold tracking-widest ${step.color} mb-2`}>{step.number}</div>
-                  <h3 className="font-bold text-lg text-white mb-3">{step.title}</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
+                  <h4 className="text-white font-semibold mb-2">{d.title}</h4>
+                  <p className="text-slate-400 text-sm leading-relaxed">{d.desc}</p>
                 </div>
-              </motion.div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -618,51 +596,66 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Tech stack ── */}
-      <section className="py-10 sm:py-14 px-4 sm:px-6 border-b border-white/[0.04]">
-        <div className="max-w-5xl mx-auto text-center">
-          <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold mb-8">
-            Powered by world-class technology
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {TECH_STACK.map((tech) => (
-              <div
-                key={tech.name}
-                className="flex items-center gap-2 glass-card px-4 py-2 text-sm border-white/[0.07] hover:border-brand-700/40 transition-colors"
-              >
-                <span className="font-semibold text-white">{tech.name}</span>
-                <span className="text-slate-500 text-xs">{tech.desc}</span>
+      {/* ── Comparison: Standard VS PharmForge (table) ── */}
+      <section id="comparison" className="py-16 sm:py-20 px-4 sm:px-6 border-b border-white/[0.04]">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 text-brand-400 text-xs font-medium uppercase tracking-widest mb-4">
+              <span className="w-6 h-px bg-brand-600" />
+              Compare
+              <span className="w-6 h-px bg-brand-600" />
+            </div>
+            <h2 className="text-3xl md:text-4xl font-bold mb-3">PharmForge AI Advantage</h2>
+            <p className="text-slate-400 max-w-xl mx-auto">How PharmForge AI compares to standard virtual screening workflows</p>
+          </div>
+
+          <div className="glass-card p-0 overflow-hidden">
+            <div className="grid grid-cols-3 gap-0 divide-x divide-white/[0.04]">
+              {/* Header row */}
+              <div className="col-span-3 bg-surface-800/60 p-4">
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <div className="text-sm text-slate-400 font-medium">Feature</div>
+                  <div className="text-sm text-slate-400 font-medium">Standard Virtual Screening</div>
+                  <div className="text-sm text-brand-400 font-semibold">PharmForge AI</div>
+                </div>
               </div>
-            ))}
+
+              {/* Rows */}
+              <div className="p-5 border-t border-white/[0.03]">
+                <div className="text-sm text-slate-300 font-medium">Search Space</div>
+              </div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Limited to static vendor libraries.</div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Infinite. De novo generation of novel chemistry.</div>
+
+              <div className="p-5 border-t border-white/[0.03]">
+                <div className="text-sm text-slate-300 font-medium">Process Control</div>
+              </div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Passive (Filtering only).</div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Active. Targeted engineering via user parameters.</div>
+
+              <div className="p-5 border-t border-white/[0.03]">
+                <div className="text-sm text-slate-300 font-medium">Lead Quality</div>
+              </div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Manual multi-step analysis.</div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Automated. Integrated ADMET &amp; Toxicity audit.</div>
+
+              <div className="p-5 border-t border-white/[0.03]">
+                <div className="text-sm text-slate-300 font-medium">Time-to-Dock</div>
+              </div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Days/Weeks (Library prep).</div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">Minutes. Direct output of dock-ready candidates.</div>
+
+              <div className="p-5 border-t border-white/[0.03]">
+                <div className="text-sm text-slate-300 font-medium">Chemical Innovation</div>
+              </div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">High risk of existing patents.</div>
+              <div className="p-5 border-t border-white/[0.03] text-slate-300">High probability of novel, patentable hits.</div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── Security ── */}
-      <section className="py-10 sm:py-14 px-4 sm:px-6 border-b border-white/[0.04]">
-        <div className="max-w-4xl mx-auto glass-card p-5 sm:p-8 border border-brand-900/40 bg-gradient-to-br from-brand-900/20 to-transparent">
-          <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-            <div className="p-5 bg-brand-900/50 rounded-2xl border border-brand-700/30 flex-shrink-0">
-              <Lock size={36} className="text-brand-400" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-bold text-xl mb-2">Enterprise-grade security built in</h3>
-              <p className="text-slate-400 text-sm leading-relaxed mb-4">
-                ML models never leave the backend. All compute runs server-side. Drug discovery outputs are
-                Fernet-encrypted before DB storage. JWT auth on every protected route. Rate-limited inference.
-                No model weights or proprietary logic are ever transmitted to the browser.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {['AES-256 Encryption', 'JWT Authentication', 'Rate Limiting', 'Server-side ML', 'Role-based Access'].map(badge => (
-                  <span key={badge} className="text-xs bg-brand-900/50 text-brand-300 border border-brand-700/40 px-3 py-1 rounded-full">
-                    {badge}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Tech stack and security sections removed per request */}
 
       {/* ── Testimonials ── */}
       <section className="py-16 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
@@ -846,7 +839,7 @@ export default function Landing() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-2xl">🧬</span>
                 <span className="font-bold text-lg">
-                  <span className="text-gradient">BioGenesis</span>
+                  <span className="text-gradient">PharmForge AI</span>
                   <span className="text-slate-400 font-normal"> AI</span>
                 </span>
               </div>
@@ -875,7 +868,7 @@ export default function Landing() {
           </div>
           <div className="glow-line mb-6" />
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-slate-600">
-            <span>BioGenesis AI © 2026   For research use only. Not for clinical or commercial use.</span>
+            <span>PharmForge AI © 2026   For research use only. Not for clinical or commercial use.</span>
             <span className="flex items-center gap-1">
               Built with <span className="text-rose-500 mx-1">♥</span> for the drug discovery community
             </span>

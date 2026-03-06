@@ -34,7 +34,7 @@ export default function UpgradeModal({ open, onClose }) {
 
   async function handleUpgrade(planId) {
     if (planId === 'enterprise') {
-      toast('Contact us at hello@biogenesis.ai', { icon: '📧' })
+      toast('Contact us at hello@pharmforge.ai', { icon: '📧' })
       return
     }
     setLoading(planId)
@@ -48,9 +48,9 @@ export default function UpgradeModal({ open, onClose }) {
         key: key_id,
         amount,
         currency,
-        name: 'BioGenesis AI',
+        name: 'PharmForge AI',
         description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-        image: 'https://biogenesis.ai/logo.png',
+        image: 'https://pharmforge.ai/logo.png',
         order_id,
         handler: async function (response) {
           try {

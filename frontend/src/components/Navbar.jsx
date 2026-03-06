@@ -327,7 +327,7 @@ export default function Navbar({ onUpgrade }) {
           <Link to="/" className="flex items-center gap-2.5">
             <span className="text-2xl">🧬</span>
             <span className="font-bold text-base tracking-tight">
-              <span className="text-gradient">BioGenesis</span>
+              <span className="text-gradient">PharmForge AI</span>
               <span className="text-slate-500 font-normal text-sm"> AI</span>
             </span>
           </Link>
