@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { WavyBackground } from '@/components/ui/wavy-background'
@@ -174,6 +174,13 @@ const fadeUp = {
 export default function Landing() {
   const [annual, setAnnual] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   return (
     <WavyBackground
@@ -188,30 +195,69 @@ export default function Landing() {
     >
 
       {/* ── Navbar ── */}
-      <nav className="fixed top-0 inset-x-0 z-50 bg-surface-900/80 backdrop-blur-xl border-b border-white/[0.05]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center gap-2 sm:gap-3">
-            <span className="text-2xl">🧬</span>
-            <span className="font-bold text-base sm:text-lg tracking-tight">
-              <span className="text-gradient">BioGenesis</span>
-              <span className="text-slate-400 font-normal"> AI</span>
-            </span>
+      <nav className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/[0.04] backdrop-blur-2xl shadow-lg shadow-black/20'
+          : 'bg-transparent backdrop-blur-lg'
+      }`}>
+
+        {/* Teal gradient accent line at top */}
+        <div className="h-[2px] w-full" style={{
+          background: 'linear-gradient(90deg, transparent 0%, #0d9488 30%, #14b8a6 50%, #0d9488 70%, transparent 100%)'
+        }} />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-15 flex items-center justify-between gap-4" style={{ height: '64px' }}>
+
+          {/* Logo */}
+          <a href="/" className="flex items-center gap-2.5 group flex-shrink-0">
+            <div className="relative">
+              <div className="absolute inset-0 bg-brand-500/30 rounded-full blur-md group-hover:bg-brand-400/50 transition-all duration-300" />
+              <img src="/dna.svg" alt="BioGenesis" className="relative w-8 h-8" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <span className="font-extrabold text-sm sm:text-base tracking-tight text-gradient">BioGenesis</span>
+              <span className="text-[10px] text-slate-500 font-medium tracking-widest uppercase">Drug Discovery AI</span>
+            </div>
           </a>
 
-          {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-8 text-sm text-slate-400">
-            <a href="#how-it-works" className="hover:text-white transition-colors">How it works</a>
-            <a href="#features" className="hover:text-white transition-colors">Features</a>
-            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+          {/* Desktop nav links — centered pill style */}
+          <div className="hidden md:flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-2 py-1.5">
+            {[['#how-it-works', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
+              <a
+                key={href}
+                href={href}
+                className="relative px-4 py-1.5 text-sm text-slate-400 hover:text-white rounded-xl
+                           hover:bg-white/[0.06] transition-all duration-200 group"
+              >
+                {label}
+                <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-0 group-hover:w-4 h-[2px]
+                                 bg-brand-400 rounded-full transition-all duration-300" />
+              </a>
+            ))}
           </div>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-slate-400 hover:text-white text-sm font-medium transition-colors">
+          <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+            <Link
+              to="/login"
+              className="text-slate-400 hover:text-white text-sm font-medium px-4 py-2 rounded-xl
+                         hover:bg-white/[0.05] border border-transparent hover:border-white/[0.08] transition-all duration-200"
+            >
               Sign In
             </Link>
-            <Link to="/register" className="btn-primary text-sm py-2 px-5">
-              Get Started Free
+            <Link
+              to="/register"
+              className="relative overflow-hidden text-sm font-semibold px-5 py-2 rounded-xl text-white
+                         transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
+              style={{
+                background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #0d9488 100%)',
+                boxShadow: '0 0 18px rgba(20,184,166,0.35), 0 2px 8px rgba(0,0,0,0.4)'
+              }}
+            >
+              <span className="relative z-10 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-pulse" />
+                Get Started Free
+              </span>
             </Link>
           </div>
 
@@ -222,36 +268,50 @@ export default function Landing() {
             </Link>
             <button
               onClick={() => setMobileMenuOpen(o => !o)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
+              className="p-2 text-slate-400 hover:text-white transition-colors rounded-xl hover:bg-white/[0.06]"
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
 
-        {/* Mobile menu dropdown */}
+        {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-surface-900/98 backdrop-blur-xl border-t border-white/[0.06] px-4 py-3 space-y-1">
-            <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)}
-               className="block px-3 py-2.5 text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-xl text-sm transition-colors">
-              How it works
-            </a>
-            <a href="#features" onClick={() => setMobileMenuOpen(false)}
-               className="block px-3 py-2.5 text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-xl text-sm transition-colors">
-              Features
-            </a>
-            <a href="#pricing" onClick={() => setMobileMenuOpen(false)}
-               className="block px-3 py-2.5 text-slate-300 hover:text-white hover:bg-white/[0.04] rounded-xl text-sm transition-colors">
-              Pricing
-            </a>
-            <div className="pt-2 pb-1 border-t border-white/[0.06]">
-              <Link to="/register" onClick={() => setMobileMenuOpen(false)}
-                    className="btn-primary block text-center text-sm py-2.5 mt-2">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18 }}
+            className="md:hidden border-t border-white/[0.06] px-4 py-4 space-y-1"
+            style={{ background: 'rgba(10,15,30,0.5)', backdropFilter: 'blur(24px)' }}
+          >
+            {[['#how-it-works', 'How it works', '→'], ['#features', 'Features', '→'], ['#pricing', 'Pricing', '→']].map(([href, label]) => (
+              <a
+                key={href}
+                href={href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-4 py-3 text-slate-300 hover:text-white
+                           hover:bg-white/[0.05] rounded-xl text-sm font-medium transition-colors border border-transparent hover:border-white/[0.07]"
+              >
+                {label}
+                <ChevronRight size={14} className="text-slate-600" />
+              </a>
+            ))}
+            <div className="pt-3 pb-1 border-t border-white/[0.06]">
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-center gap-2 w-full text-sm font-semibold py-3 rounded-xl text-white mt-1"
+                style={{
+                  background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)',
+                  boxShadow: '0 0 16px rgba(20,184,166,0.3)'
+                }}
+              >
+                <span className="w-1.5 h-1.5 bg-white/70 rounded-full animate-pulse" />
                 Get Started Free
               </Link>
             </div>
-          </div>
+          </motion.div>
         )}
       </nav>
 
