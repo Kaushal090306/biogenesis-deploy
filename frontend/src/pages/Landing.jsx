@@ -491,47 +491,45 @@ export default function Landing() {
       </section>
 
       {/* ── Features ── */}
-      <section id="features" className="py-24 px-6 border-b border-white/[0.04]">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="inline-flex items-center gap-2 text-brand-400 text-xs font-medium uppercase tracking-widest mb-4"
-            >
-              <span className="w-6 h-px bg-brand-600" />
-              Features
-              <span className="w-6 h-px bg-brand-600" />
-            </motion.div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">Everything you need</h2>
-            <p className="text-slate-400 max-w-xl mx-auto">
-              A complete platform for in-silico drug lead generation   secure, fast, and reproducible.
-            </p>
-          </div>
+      <section id="features" className="py-24 border-b border-white/[0.04]">
+        {/* Heading — keep centred inside normal max-width */}
+        <div className="max-w-6xl mx-auto px-6 text-center mb-16">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="inline-flex items-center gap-2 text-brand-400 text-xs font-medium uppercase tracking-widest mb-4"
+          >
+            <span className="w-6 h-px bg-brand-600" />
+            Features
+            <span className="w-6 h-px bg-brand-600" />
+          </motion.div>
+          <h2 className="text-3xl md:text-4xl font-bold mb-3">Everything you need</h2>
+          <p className="text-slate-400 max-w-xl mx-auto">
+            A complete platform for in-silico drug lead generation   secure, fast, and reproducible.
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((f, i) => (
-              <motion.div
-                key={f.title}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className={`glass-card p-6 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300`}
+        {/* Full-viewport rail — no max-width, no horizontal padding */}
+        <div className="overflow-hidden w-screen" style={{ marginLeft: 'calc(50% - 50vw)' }}>
+          <div className="flex gap-4 py-3 rail-track" style={{ width: 'max-content' }}>
+            {[...FEATURES, ...FEATURES].map((f, i) => (
+              <div
+                key={i}
+                style={{ width: '400px', minHeight: '260px', flexShrink: 0 }}
+                className={`glass-card p-8 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-2.5 rounded-xl bg-white/[0.05] group-hover:bg-white/[0.09] transition-colors">
-                    <f.icon size={22} className="text-brand-400" />
+                <div className="flex items-start justify-between mb-5">
+                  <div className="p-3 rounded-xl bg-white/[0.05] group-hover:bg-white/[0.09] transition-colors">
+                    <f.icon size={26} className="text-brand-400" />
                   </div>
                   <span className="text-[10px] font-mono text-slate-500 bg-white/[0.04] px-2 py-1 rounded border border-white/[0.06]">
                     {f.tag}
                   </span>
                 </div>
-                <h3 className="font-semibold text-white mb-2">{f.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
-              </motion.div>
+                <h3 className="font-semibold text-white text-lg mb-3">{f.title}</h3>
+                <p className="text-slate-400 text-sm leading-relaxed flex-1">{f.desc}</p>
+              </div>
             ))}
           </div>
         </div>

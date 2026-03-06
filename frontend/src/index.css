@@ -74,6 +74,20 @@
   }
 }
 
+@keyframes rail-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.rail-track {
+  animation: rail-scroll 30s linear infinite;
+  will-change: transform;
+}
+
+.rail-track:hover {
+  animation-play-state: paused;
+}
+
 /* Molecule table */
 .leads-table th {
   @apply text-xs text-slate-400 uppercase tracking-wider font-semibold px-4 py-3 text-left;
