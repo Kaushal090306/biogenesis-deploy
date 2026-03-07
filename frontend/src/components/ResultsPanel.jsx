@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Download, ChevronUp, ChevronDown, Dna, FlaskConical, FileSpreadsheet, Image as ImageIcon } from 'lucide-react'
+import { Download, ChevronUp, ChevronDown, Dna, FlaskConical, FileSpreadsheet, Image as ImageIcon, ArrowUp } from 'lucide-react'
 
 // Matches backend ml_pipeline.py lead entry fields
 const COL_DEFS = [
@@ -27,6 +27,16 @@ export default function ResultsPanel({ result }) {
   const [sortKey, setSortKey] = useState('predicted_p_affinity')
   const [sortAsc, setSortAsc] = useState(false)
   const [expandImg, setExpandImg] = useState(false)
+  const [showScrollTop, setShowScrollTop] = useState(false)
+  const tableScrollRef = useRef(null)
+
+  function handleTableScroll(e) {
+    setShowScrollTop(e.currentTarget.scrollTop > 160)
+  }
+
+  function scrollTableToTop() {
+    tableScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   if (!result) {
     return (
@@ -153,10 +163,15 @@ export default function ResultsPanel({ result }) {
           </span>
         </div>
 
-        {/* Horizontally scrollable table */}
-        <div className="overflow-x-auto">
+        {/* Fixed-height box: shows 20 rows, both axes scroll, sticky header */}
+        <div className="relative">
+        <div
+          ref={tableScrollRef}
+          onScroll={handleTableScroll}
+          className="overflow-x-auto overflow-y-auto max-h-[640px] border border-white/[0.04] rounded-b-xl"
+        >
           <table className="leads-table w-full text-xs">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-surface-900">
               <tr>
                 {COL_DEFS.map((col) => (
                   <th
@@ -212,6 +227,18 @@ export default function ResultsPanel({ result }) {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Scroll-to-top button — appears after scrolling down */}
+        {showScrollTop && (
+          <button
+            onClick={scrollTableToTop}
+            className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold bg-brand-600/90 hover:bg-brand-500 text-white shadow-lg backdrop-blur-sm border border-brand-500/40 transition-all"
+          >
+            <ArrowUp size={13} />
+            
+          </button>
+        )}
         </div>
       </div>
     </motion.div>
