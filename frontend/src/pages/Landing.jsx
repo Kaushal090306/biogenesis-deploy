@@ -338,7 +338,7 @@ export default function Landing() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.7 }}
-                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold leading-[1.05] tracking-tight mb-5"
+                className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold leading-[1.05] tracking-tight mb-5"
               >
                 <span className="text-gradient">PharmForge AI:</span>
                 <br />
@@ -536,7 +536,7 @@ export default function Landing() {
           <div className="mt-10 max-w-6xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {HOW_DETAILS.map((d, i) => (
-                <div key={i} className="glass-card p-5 border-white/[0.04] h-full">
+                <div key={i} className="glass-morph p-5 h-full">
                   <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/[0.03] mb-3">
                     <d.icon size={18} className="text-brand-400" />
                   </div>
@@ -578,7 +578,7 @@ export default function Landing() {
               <div
                 key={i}
                 style={{ width: 'min(85vw, 340px)', minHeight: '240px', flexShrink: 0 }}
-                className={`glass-card p-8 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col`}
+                className={`glass-morph p-8 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col`}
               >
                 <div className="flex items-start justify-between mb-5">
                   <div className="p-3 rounded-xl bg-white/[0.05] group-hover:bg-white/[0.09] transition-colors">
@@ -609,7 +609,7 @@ export default function Landing() {
             <p className="text-slate-400 max-w-xl mx-auto">How PharmForge AI compares to standard virtual screening workflows</p>
           </div>
 
-          <div className="glass-card p-0 overflow-hidden">
+          <div className="glass-morph p-0 overflow-hidden">
             <div className="grid grid-cols-3 gap-0 divide-x divide-white/[0.04]">
               {/* Header row */}
               <div className="col-span-3 bg-surface-800/60 p-4">
@@ -684,7 +684,7 @@ export default function Landing() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className="glass-card p-7 flex flex-col gap-5 hover:border-brand-700/30 transition-colors"
+                className="glass-morph p-7 flex flex-col gap-5 hover:border-brand-700/30 transition-colors"
               >
                 <div className="flex gap-0.5">
                   {Array.from({ length: t.stars }).map((_, j) => (
@@ -751,10 +751,10 @@ export default function Landing() {
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
-                className={`glass-card p-7 flex flex-col relative ${
+                className={`glass-morph p-7 flex flex-col relative ${
                   plan.highlighted
                     ? 'border-brand-600/60 ring-1 ring-brand-500/30 shadow-xl shadow-brand-900/40'
-                    : 'border-white/[0.06]'
+                    : ''
                 }`}
               >
                 {plan.highlighted && (
@@ -805,7 +805,7 @@ export default function Landing() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="glass-card p-7 sm:p-10 md:p-12 border border-brand-700/30 bg-gradient-to-br from-brand-900/30 to-violet-900/20 relative overflow-hidden text-center"
+            className="glass-morph p-7 sm:p-10 md:p-12 border border-brand-700/30 bg-gradient-to-br from-brand-900/30 to-violet-900/20 relative overflow-hidden text-center"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-brand-600/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
