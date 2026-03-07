@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { WavyBackground } from '@/components/ui/wavy-background'
+import RotatingText from '@/components/ui/RotatingText'
 import {
   ArrowRight, Shield, Zap, Database, FlaskConical, ChevronRight,
   CheckCircle2, Star, BarChart3, Target, ChevronDown, Menu, X,
@@ -222,7 +223,7 @@ export default function Landing() {
           </a>
 
           {/* Desktop nav links — centered pill style */}
-          <div className="hidden md:flex items-center gap-1 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-2 py-1.5">
+          <div className="hidden md:flex items-center gap-1 bg-white/[0.03] rounded-2xl px-2 py-1.5">
             {[['#how-it-works', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
               <a
                 key={href}
@@ -342,7 +343,23 @@ export default function Landing() {
               >
                 <span className="text-gradient">PharmForge AI:</span>
                 <br />
-                High-Velocity Molecular Engineering for Targeted Discovery.
+                High-Velocity
+                <br />
+                <RotatingText
+                  texts={['Molecular Engineering', 'Drug Design', 'Compound Generation', 'Ligand Design']}
+                  mainClassName="whitespace-nowrap"
+                  splitLevelClassName="overflow-hidden pb-0.5"
+                  elementLevelClassName="text-teal-300"
+                  staggerFrom="last"
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '-120%' }}
+                  staggerDuration={0.025}
+                  transition={{ type: 'spring', damping: 30, stiffness: 400 }}
+                  rotationInterval={2500}
+                />
+                <br />
+                for Targeted Discovery.
               </motion.h1>
 
               <motion.p
