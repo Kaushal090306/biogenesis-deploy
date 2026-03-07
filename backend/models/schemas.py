@@ -9,6 +9,8 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     consent: bool = Field(..., description="Must accept scientific data consent")
+    organization: Optional[str] = Field(default=None, max_length=255)
+    role: Optional[str] = Field(default=None, max_length=50)
 
 
 class LoginRequest(BaseModel):
@@ -23,6 +25,11 @@ class ChangePasswordRequest(BaseModel):
 
 class UpdateUsernameRequest(BaseModel):
     username: str = Field(min_length=2, max_length=50)
+
+
+class UpdateProfileRequest(BaseModel):
+    organization: Optional[str] = Field(default=None, max_length=255)
+    role: Optional[str] = Field(default=None, max_length=50)
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -96,6 +103,8 @@ class UserPublic(BaseModel):
     plan: str
     email_verified: bool = False
     is_admin: bool = False
+    organization: Optional[str] = None
+    role: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -181,6 +190,8 @@ class AdminUserItem(BaseModel):
     id: int
     email: str
     username: Optional[str] = None
+    organization: Optional[str] = None
+    role: Optional[str] = None
     tokens_left: int
     plan: str
     email_verified: bool

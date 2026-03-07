@@ -167,13 +167,18 @@ function UsersTab() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
+  const [planFilter, setPlanFilter] = useState('')
+  const [verifiedFilter, setVerifiedFilter] = useState('')   // '' | 'true' | 'false'
+  const [adminFilter, setAdminFilter] = useState('')         // '' | 'true' | 'false'
   const [loading, setLoading] = useState(false)
   const [editUser, setEditUser] = useState(null)
 
   const fetchUsers = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await adminGetUsers(page, 20, search)
+      const verified = verifiedFilter === '' ? null : verifiedFilter === 'true'
+      const adminOnly = adminFilter === '' ? null : adminFilter === 'true'
+      const res = await adminGetUsers(page, 20, search, planFilter, verified, adminOnly)
       setUsers(res.data.items)
       setTotal(res.data.total)
     } catch {
@@ -181,7 +186,7 @@ function UsersTab() {
     } finally {
       setLoading(false)
     }
-  }, [page, search])
+  }, [page, search, planFilter, verifiedFilter, adminFilter])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
@@ -202,22 +207,61 @@ function UsersTab() {
     setPage(1)
   }
 
+  function clearAllFilters() {
+    setSearchInput('')
+    setSearch('')
+    setPlanFilter('')
+    setVerifiedFilter('')
+    setAdminFilter('')
+    setPage(1)
+  }
+
   const planColor = { free: 'text-slate-400', pro: 'text-brand-400', enterprise: 'text-amber-400' }
+  const ROLE_LABELS = { professor: 'Professor', researcher: 'Researcher', student: 'Student', industry_scientist: 'Industry Scientist', other: 'Other' }
 
   return (
     <div>
-      <form onSubmit={handleSearch} className="flex gap-2 mb-4">
+      {/* Search + Filters */}
+      <form onSubmit={handleSearch} className="flex flex-wrap gap-2 mb-4">
         <input
-          className="input-field flex-1"
+          className="input-field flex-1 min-w-[180px]"
           placeholder="Search by email or username…"
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
         />
+        <select
+          value={planFilter}
+          onChange={e => { setPlanFilter(e.target.value); setPage(1) }}
+          className="input-field w-32"
+        >
+          <option value="">All Plans</option>
+          <option value="free">Free</option>
+          <option value="pro">Pro</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+        <select
+          value={verifiedFilter}
+          onChange={e => { setVerifiedFilter(e.target.value); setPage(1) }}
+          className="input-field w-36"
+        >
+          <option value="">All Verified</option>
+          <option value="true">Verified</option>
+          <option value="false">Unverified</option>
+        </select>
+        <select
+          value={adminFilter}
+          onChange={e => { setAdminFilter(e.target.value); setPage(1) }}
+          className="input-field w-32"
+        >
+          <option value="">All Roles</option>
+          <option value="true">Admins</option>
+          <option value="false">Users</option>
+        </select>
         <button type="submit" className="btn-primary px-4 py-2 flex items-center gap-1.5 text-sm">
           <Search size={14} /> Search
         </button>
-        <button type="button" onClick={() => { setSearchInput(''); setSearch(''); setPage(1) }}
-          className="btn-outline px-3 py-2" title="Clear">
+        <button type="button" onClick={clearAllFilters}
+          className="btn-outline px-3 py-2" title="Clear all filters">
           <RefreshCw size={14} />
         </button>
       </form>
@@ -229,7 +273,7 @@ function UsersTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-surface-800/60 text-slate-400 uppercase tracking-wider">
-                  {['ID', 'Email', 'Username', 'Plan', 'Tokens', 'Verified', 'Admin', 'Joined', 'Actions'].map(h => (
+                  {['ID', 'Email', 'Username', 'Organization', 'Role', 'Plan', 'Tokens', 'Verified', 'Admin', 'Joined', 'Actions'].map(h => (
                     <th key={h} className="px-3 py-2.5 text-left font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -238,8 +282,10 @@ function UsersTab() {
                 {users.map((u, i) => (
                   <tr key={u.id} className={`border-t border-white/[0.04] ${i % 2 === 0 ? '' : 'bg-surface-800/20'} hover:bg-surface-800/40 transition-colors`}>
                     <td className="px-3 py-2.5 text-slate-500 font-mono">#{u.id}</td>
-                    <td className="px-3 py-2.5 text-slate-200 max-w-[180px] truncate">{u.email}</td>
+                    <td className="px-3 py-2.5 text-slate-200 max-w-[160px] truncate">{u.email}</td>
                     <td className="px-3 py-2.5 text-slate-400">{u.username || '—'}</td>
+                    <td className="px-3 py-2.5 text-slate-400 max-w-[140px] truncate">{u.organization || '—'}</td>
+                    <td className="px-3 py-2.5 text-slate-400 whitespace-nowrap">{u.role ? (ROLE_LABELS[u.role] || u.role) : '—'}</td>
                     <td className={`px-3 py-2.5 font-medium ${planColor[u.plan] ?? 'text-slate-400'}`}>{u.plan}</td>
                     <td className="px-3 py-2.5 text-slate-300 font-mono">{u.tokens_left.toLocaleString()}</td>
                     <td className="px-3 py-2.5">
@@ -268,7 +314,7 @@ function UsersTab() {
                   </tr>
                 ))}
                 {users.length === 0 && (
-                  <tr><td colSpan={9} className="text-center py-10 text-slate-600">No users found.</td></tr>
+                  <tr><td colSpan={11} className="text-center py-10 text-slate-600">No users found.</td></tr>
                 )}
               </tbody>
             </table>
@@ -294,13 +340,14 @@ function PredictionsTab() {
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [userIdFilter, setUserIdFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
   const [loading, setLoading] = useState(false)
   const [viewId, setViewId] = useState(null)
 
   const fetchPreds = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await adminGetPredictions(page, 20, Number(userIdFilter) || 0)
+      const res = await adminGetPredictions(page, 20, Number(userIdFilter) || 0, statusFilter)
       setPreds(res.data.items)
       setTotal(res.data.total)
     } catch {
@@ -308,7 +355,7 @@ function PredictionsTab() {
     } finally {
       setLoading(false)
     }
-  }, [page, userIdFilter])
+  }, [page, userIdFilter, statusFilter])
 
   useEffect(() => { fetchPreds() }, [fetchPreds])
 
@@ -316,7 +363,7 @@ function PredictionsTab() {
 
   return (
     <div>
-      <div className="flex gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4">
         <input
           type="number"
           className="input-field w-40"
@@ -324,7 +371,17 @@ function PredictionsTab() {
           value={userIdFilter}
           onChange={e => { setUserIdFilter(e.target.value); setPage(1) }}
         />
-        <button onClick={fetchPreds} className="btn-outline px-3 py-2" title="Refresh">
+        <select
+          value={statusFilter}
+          onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
+          className="input-field w-36"
+        >
+          <option value="">All Statuses</option>
+          <option value="done">Done</option>
+          <option value="pending">Pending</option>
+          <option value="failed">Failed</option>
+        </select>
+        <button onClick={() => { setUserIdFilter(''); setStatusFilter(''); setPage(1) }} className="btn-outline px-3 py-2" title="Clear filters">
           <RefreshCw size={14} />
         </button>
       </div>

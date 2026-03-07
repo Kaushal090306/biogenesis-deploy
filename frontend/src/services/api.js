@@ -26,8 +26,8 @@ api.interceptors.response.use(
 )
 
 // ── Auth ──
-export const register = (username, email, password, consent) =>
-  api.post('/auth/register', { username, email, password, consent })
+export const register = (username, email, password, consent, organization, role) =>
+  api.post('/auth/register', { username, email, password, consent, organization, role })
 
 export const login = (email, password) =>
   api.post('/auth/login', { email, password })
@@ -49,6 +49,9 @@ export const runPrediction = (sequence, params) =>
 export const getProfile = () => api.get('/dashboard/me')
 
 export const updateUsername = (username) => api.patch('/dashboard/username', { username })
+
+export const updateProfile = (organization, role) =>
+  api.patch('/dashboard/profile', { organization, role })
 
 export const getHistory = (page = 1, pageSize = 10) =>
   api.get('/dashboard/history', { params: { page, page_size: pageSize } })
@@ -75,8 +78,8 @@ export const resetPassword = (email, otp, new_password) =>
 export const healthCheck = () => api.get('/health')
 
 // ── Admin ──
-export const adminGetUsers = (page = 1, pageSize = 20, search = '') =>
-  api.get('/admin/users', { params: { page, page_size: pageSize, search } })
+export const adminGetUsers = (page = 1, pageSize = 20, search = '', plan = '', verified = null, adminOnly = null) =>
+  api.get('/admin/users', { params: { page, page_size: pageSize, search, plan, ...(verified !== null && { verified }), ...(adminOnly !== null && { admin_only: adminOnly }) } })
 
 export const adminGetUser = (id) => api.get(`/admin/users/${id}`)
 
@@ -84,8 +87,8 @@ export const adminEditUser = (id, data) => api.patch(`/admin/users/${id}`, data)
 
 export const adminDeleteUser = (id) => api.delete(`/admin/users/${id}`)
 
-export const adminGetPredictions = (page = 1, pageSize = 20, userId = 0) =>
-  api.get('/admin/predictions', { params: { page, page_size: pageSize, user_id: userId } })
+export const adminGetPredictions = (page = 1, pageSize = 20, userId = 0, status = '') =>
+  api.get('/admin/predictions', { params: { page, page_size: pageSize, user_id: userId, ...(status && { status }) } })
 
 export const adminGetPrediction = (id) => api.get(`/admin/predictions/${id}`)
 

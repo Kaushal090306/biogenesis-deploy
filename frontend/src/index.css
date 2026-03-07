@@ -100,3 +100,172 @@
 
 /* Custom range slider */
 input[type=range] { @apply accent-brand-500; }
+
+/* ─── Run Discovery Pipeline button ─── */
+.discovery-btn {
+  background: #0d9488;
+  color: white;
+  font-family: inherit;
+  padding: 0.35em;
+  padding-left: 1.2em;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 0.9em;
+  border: none;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  box-shadow: inset 0 0 1.6em -0.6em #042f2e;
+  overflow: hidden;
+  position: relative;
+  height: 2.8em;
+  padding-right: 3.3em;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+.discovery-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.discovery-btn:hover:not(:disabled) {
+  background: #0f766e;
+}
+.discovery-btn .discovery-btn-icon {
+  background: white;
+  margin-left: 1em;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.2em;
+  width: 2.2em;
+  border-radius: 0.7em;
+  box-shadow: 0.1em 0.1em 0.6em 0.2em #0f766e;
+  right: 0.3em;
+  transition: all 0.3s;
+}
+.discovery-btn:hover:not(:disabled) .discovery-btn-icon {
+  width: calc(100% - 0.6em);
+}
+.discovery-btn .discovery-btn-icon svg {
+  width: 1.1em;
+  transition: transform 0.3s;
+  color: #0f766e;
+}
+.discovery-btn:hover:not(:disabled) .discovery-btn-icon svg {
+  transform: translateX(0.1em);
+}
+.discovery-btn:active:not(:disabled) .discovery-btn-icon {
+  transform: scale(0.95);
+}
+
+/* ─── Light Theme (dashboard-only, scoped to .theme-light wrapper) ─── */
+.theme-light,
+.theme-light body {
+  background-color: #f0f4f8;
+}
+.theme-light ::-webkit-scrollbar-track { background: #e2e8f0; }
+.theme-light ::-webkit-scrollbar-thumb { background: #94a3b8; }
+.theme-light ::-webkit-scrollbar-thumb:hover { background: #0d9488; }
+
+/* Page background */
+.theme-light { background-color: #f0f4f8 !important; }
+
+/* Cards */
+.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.97) !important;
+  border-color: rgba(15, 23, 42, 0.09) !important;
+  box-shadow: 0 4px 24px rgba(15, 23, 42, 0.07) !important;
+}
+
+/* Navbar */
+.theme-light nav {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(15, 23, 42, 0.07) !important;
+}
+
+/* Inputs */
+.theme-light .input-field {
+  background: rgba(248, 250, 252, 0.9) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  color: #0f172a !important;
+}
+.theme-light .input-field::placeholder { color: #9ca3af !important; }
+.theme-light select.input-field option { background: #f8fafc; color: #0f172a; }
+
+/* Surface backgrounds */
+.theme-light .bg-surface-900 { background-color: #f0f4f8 !important; }
+.theme-light .bg-surface-800 { background-color: #ffffff !important; }
+
+/* Tabs row background */
+.theme-light .bg-surface-800\/60 { background-color: rgba(226,232,240,0.7) !important; }
+
+/* Text — glass-card context */
+.theme-light .glass-card .text-white { color: #0f172a !important; }
+.theme-light .glass-card .text-slate-200 { color: #1f2937 !important; }
+.theme-light .glass-card .text-slate-300 { color: #374151 !important; }
+.theme-light .glass-card .text-slate-400 { color: #4b5563 !important; }
+.theme-light .glass-card .text-slate-500 { color: #6b7280 !important; }
+.theme-light .glass-card .text-slate-600 { color: #9ca3af !important; }
+
+/* Text — navbar context */
+.theme-light nav .text-white { color: #0f172a !important; }
+.theme-light nav .text-slate-300 { color: #374151 !important; }
+.theme-light nav .text-slate-400 { color: #4b5563 !important; }
+.theme-light nav .text-slate-500 { color: #6b7280 !important; }
+
+/* Text — page-level (outside cards) */
+.theme-light .text-white { color: #0f172a !important; }
+.theme-light .text-slate-300 { color: #374151 !important; }
+.theme-light .text-slate-400 { color: #4b5563 !important; }
+.theme-light .text-slate-500 { color: #6b7280 !important; }
+.theme-light .text-slate-600 { color: #9ca3af !important; }
+
+/* Restore white text on coloured buttons (always white text regardless) */
+.theme-light .btn-primary { color: white !important; }
+.theme-light .btn-primary * { color: white !important; }
+.theme-light .discovery-btn { color: white !important; }
+.theme-light .discovery-btn .discovery-btn-icon svg { color: #0f766e !important; }
+
+/* Brand-coloured badge text stays on brand */
+.theme-light .text-brand-300, .theme-light .text-brand-400 { color: #0d9488 !important; }
+.theme-light .text-brand-500 { color: #0d9488 !important; }
+
+/* Amber warning text */
+.theme-light .text-amber-500\/80, .theme-light .text-amber-400 { color: #b45309 !important; }
+
+/* Counter +/− buttons in light */
+.theme-light .glass-card button:not(.btn-primary):not(.discovery-btn) {
+  color: inherit;
+}
+
+/* Slider / counter track */
+.theme-light .bg-surface-600 { background-color: #cbd5e1 !important; }
+.theme-light input[type="range"] { background: #cbd5e1; }
+
+/* Nav token badge */
+.theme-light .bg-brand-900\/20 { background-color: rgba(13,148,136,0.08) !important; }
+.theme-light .bg-brand-900\/30 { background-color: rgba(13,148,136,0.10) !important; }
+
+/* Inline surface boxes (profile modal stats, counter +/− buttons) */
+.theme-light [class*="bg-surface-700"] { background-color: rgba(226,232,240,0.8) !important; }
+.theme-light [class*="bg-surface-800\/60"] { background-color: rgba(241,245,249,0.95) !important; }
+
+/* Dropdown menus */
+.theme-light .glass-card [class*="bg-surface-700"] { background-color: rgba(241,245,249,0.9) !important; }
+
+/* Label text */
+.theme-light .label-text { color: #374151 !important; }
+
+/* Table */
+.theme-light .leads-table th { background: rgba(15,23,42,0.03); color: #374151 !important; }
+.theme-light .leads-table td { color: #374151 !important; border-color: rgba(15,23,42,0.06) !important; }
+.theme-light .leads-table tr:hover td { background: rgba(13,148,136,0.04); }
+
+/* Tab cursor pill stays brand-coloured */
+.theme-light li.text-white { color: white !important; }
+
+/* Tooltip popups */
+.theme-light .bg-surface-700 { background-color: #f1f5f9 !important; border-color: rgba(15,23,42,0.10) !important; }
+.theme-light .bg-surface-700 .text-slate-300 { color: #374151 !important; }

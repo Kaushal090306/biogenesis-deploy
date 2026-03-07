@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, Zap, FlaskConical, User, KeyRound, ChevronDown, X, Eye, EyeOff, RefreshCw, Pencil, Check, ShieldCheck } from 'lucide-react'
+import { LogOut, Zap, FlaskConical, User, KeyRound, ChevronDown, X, Eye, EyeOff, RefreshCw, Pencil, Check, ShieldCheck, Building2, Sun, Moon, Clock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { changePassword, forgotPassword, resetPassword, updateUsername } from '../services/api'
+import { useTheme } from '../contexts/ThemeContext'
+import { changePassword, forgotPassword, resetPassword, updateUsername, updateProfile } from '../services/api'
 import toast from 'react-hot-toast'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -197,6 +198,17 @@ function ProfileModal({ user, onClose, onChangePassword, onUsernameUpdate }) {
   const [usernameVal, setUsernameVal] = useState(user?.username || '')
   const [savingUsername, setSavingUsername] = useState(false)
 
+  const [editingOrg, setEditingOrg] = useState(false)
+  const [orgVal, setOrgVal] = useState(user?.organization || '')
+  const [editingRole, setEditingRole] = useState(false)
+  const [roleVal, setRoleVal] = useState(user?.role || '')
+  const [savingProfile, setSavingProfile] = useState(false)
+
+  const ROLE_LABELS = {
+    professor: 'Professor', researcher: 'Researcher', student: 'Student',
+    industry_scientist: 'Industry Scientist', other: 'Other',
+  }
+
   async function handleSaveUsername() {
     const trimmed = usernameVal.trim()
     if (!trimmed || trimmed.length < 2) { toast.error('Username must be at least 2 characters.'); return }
@@ -211,6 +223,21 @@ function ProfileModal({ user, onClose, onChangePassword, onUsernameUpdate }) {
       toast.error(err.response?.data?.detail || 'Failed to update username.')
     } finally {
       setSavingUsername(false)
+    }
+  }
+
+  async function handleSaveProfile() {
+    setSavingProfile(true)
+    try {
+      const res = await updateProfile(orgVal || null, roleVal || null)
+      onUsernameUpdate(res.data)
+      setEditingOrg(false)
+      setEditingRole(false)
+      toast.success('Profile updated!')
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to update profile.')
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -286,6 +313,67 @@ function ProfileModal({ user, onClose, onChangePassword, onUsernameUpdate }) {
           Member since {user?.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' }) : '—'}
         </p>
 
+        {/* Organization & Role */}
+        <div className="space-y-3 mb-4">
+          <div className="bg-surface-800/60 border border-white/[0.06] rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-500 flex items-center gap-1.5"><Building2 size={11} /> Organization</span>
+              {!editingOrg && (
+                <button onClick={() => { setOrgVal(user?.organization || ''); setEditingOrg(true) }}
+                  className="text-slate-500 hover:text-brand-400 transition-colors"><Pencil size={11} /></button>
+              )}
+            </div>
+            {editingOrg ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <input
+                  autoFocus value={orgVal} onChange={e => setOrgVal(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') setEditingOrg(false) }}
+                  maxLength={255}
+                  className="flex-1 bg-transparent border-b border-brand-600/70 text-white text-sm outline-none pb-0.5"
+                  placeholder="University / Company / Lab"
+                />
+                <button onClick={handleSaveProfile} disabled={savingProfile}
+                  className="text-brand-400 hover:text-brand-300 transition-colors">
+                  {savingProfile ? <span className="w-3 h-3 border border-brand-400/40 border-t-brand-400 rounded-full animate-spin inline-block" /> : <Check size={13} />}
+                </button>
+                <button onClick={() => setEditingOrg(false)} className="text-slate-500 hover:text-slate-300"><X size={13} /></button>
+              </div>
+            ) : (
+              <p className="text-sm text-white mt-0.5">{user?.organization || <span className="text-slate-600 italic">Not set</span>}</p>
+            )}
+          </div>
+
+          <div className="bg-surface-800/60 border border-white/[0.06] rounded-xl p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-slate-500">Role</span>
+              {!editingRole && (
+                <button onClick={() => { setRoleVal(user?.role || ''); setEditingRole(true) }}
+                  className="text-slate-500 hover:text-brand-400 transition-colors"><Pencil size={11} /></button>
+              )}
+            </div>
+            {editingRole ? (
+              <div className="flex items-center gap-1.5 mt-1">
+                <select value={roleVal} onChange={e => setRoleVal(e.target.value)}
+                  className="flex-1 bg-surface-700 border border-white/10 rounded-lg px-2 py-1 text-white text-sm outline-none">
+                  <option value="">Select role…</option>
+                  <option value="professor">Professor</option>
+                  <option value="researcher">Researcher</option>
+                  <option value="student">Student</option>
+                  <option value="industry_scientist">Industry Scientist</option>
+                  <option value="other">Other</option>
+                </select>
+                <button onClick={handleSaveProfile} disabled={savingProfile}
+                  className="text-brand-400 hover:text-brand-300 transition-colors">
+                  {savingProfile ? <span className="w-3 h-3 border border-brand-400/40 border-t-brand-400 rounded-full animate-spin inline-block" /> : <Check size={13} />}
+                </button>
+                <button onClick={() => setEditingRole(false)} className="text-slate-500 hover:text-slate-300"><X size={13} /></button>
+              </div>
+            ) : (
+              <p className="text-sm text-white mt-0.5">{user?.role ? (ROLE_LABELS[user.role] || user.role) : <span className="text-slate-600 italic">Not set</span>}</p>
+            )}
+          </div>
+        </div>
+
         <button onClick={onChangePassword}
           className="w-full flex items-center justify-center gap-2 text-sm text-slate-300 hover:text-white bg-surface-700/50 hover:bg-surface-600/50 border border-white/[0.06] py-2.5 rounded-xl transition-all">
           <KeyRound size={14} />
@@ -296,8 +384,9 @@ function ProfileModal({ user, onClose, onChangePassword, onUsernameUpdate }) {
   )
 }
 
-export default function Navbar({ onUpgrade }) {
+export default function Navbar({ onUpgrade, onHistory }) {
   const { user, logout, updateUser } = useAuth()
+  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
@@ -334,6 +423,21 @@ export default function Navbar({ onUpgrade }) {
 
           {/* Right */}
           <div className="flex items-center gap-3">
+            {/* Theme toggle */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 active:scale-95 bg-surface-700/60 border border-white/[0.08] text-slate-400 hover:text-brand-300 hover:border-brand-700/40"
+              aria-label="Toggle theme"
+            >
+              <motion.div
+                animate={{ rotate: isDark ? 0 : 180 }}
+                transition={{ duration: 0.35, ease: 'easeInOut' }}
+              >
+                {isDark ? <Moon size={14} /> : <Sun size={14} />}
+              </motion.div>
+            </button>
+
             {user && (
               <>
                 <button
@@ -395,6 +499,13 @@ export default function Navbar({ onUpgrade }) {
                         >
                           <KeyRound size={14} className="text-brand-400" />
                           Change Password
+                        </button>
+                        <button
+                          onClick={() => { setMenuOpen(false); onHistory?.() }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-sm text-slate-300 hover:bg-white/[0.04] hover:text-white transition-colors"
+                        >
+                          <Clock size={14} className="text-brand-400" />
+                          History
                         </button>
                         {user?.is_admin && (
                           <>

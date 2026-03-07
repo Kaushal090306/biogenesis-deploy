@@ -9,7 +9,7 @@ from db import models as db_models
 from models.schemas import (
     PaginatedHistory, PredictionHistoryItem, UserPublic,
     CheckoutRequest, RazorpayOrderResponse, RazorpayVerifyRequest,
-    PredictionDetail, UpdateUsernameRequest,
+    PredictionDetail, UpdateUsernameRequest, UpdateProfileRequest,
 )
 from core.dependencies import get_current_user
 from core.config import get_settings
@@ -24,6 +24,21 @@ settings = get_settings()
 
 @router.get("/me", response_model=UserPublic)
 async def get_profile(current_user: db_models.User = Depends(get_current_user)):
+    return UserPublic.model_validate(current_user)
+
+
+@router.patch("/profile", response_model=UserPublic)
+async def update_profile(
+    body: UpdateProfileRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: db_models.User = Depends(get_current_user),
+):
+    if body.organization is not None:
+        current_user.organization = body.organization
+    if body.role is not None:
+        current_user.role = body.role
+    await db.commit()
+    await db.refresh(current_user)
     return UserPublic.model_validate(current_user)
 
 
