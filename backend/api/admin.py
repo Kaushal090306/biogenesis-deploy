@@ -31,6 +31,9 @@ async def admin_list_users(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     search: str = Query(default=""),
+    plan: str = Query(default=""),
+    verified: bool | None = Query(default=None),
+    admin_only: bool | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _: db_models.User = Depends(get_admin_user),
 ):
@@ -44,6 +47,15 @@ async def admin_list_users(
         count_q = count_q.where(
             db_models.User.email.ilike(like) | db_models.User.username.ilike(like)
         )
+    if plan:
+        q = q.where(db_models.User.plan == plan)
+        count_q = count_q.where(db_models.User.plan == plan)
+    if verified is not None:
+        q = q.where(db_models.User.email_verified == verified)
+        count_q = count_q.where(db_models.User.email_verified == verified)
+    if admin_only is not None:
+        q = q.where(db_models.User.is_admin == admin_only)
+        count_q = count_q.where(db_models.User.is_admin == admin_only)
 
     total = (await db.execute(count_q)).scalar_one()
     users = (
@@ -127,6 +139,7 @@ async def admin_list_predictions(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     user_id: int = Query(default=0),
+    status: str = Query(default=""),
     db: AsyncSession = Depends(get_db),
     _: db_models.User = Depends(get_admin_user),
 ):
@@ -139,6 +152,9 @@ async def admin_list_predictions(
     if user_id:
         q = q.where(db_models.Prediction.user_id == user_id)
         count_q = count_q.where(db_models.Prediction.user_id == user_id)
+    if status:
+        q = q.where(db_models.Prediction.status == status)
+        count_q = count_q.where(db_models.Prediction.status == status)
 
     total = (await db.execute(count_q)).scalar_one()
     rows = (

@@ -207,6 +207,8 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         email_verified=False,
         otp_code=otp,
         otp_expires_at=expires,
+        organization=payload.organization,
+        role=payload.role,
     )
     db.add(user)
     await db.commit()

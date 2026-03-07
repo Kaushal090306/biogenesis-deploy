@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import {
   Eye, EyeOff, Mail, Lock, ArrowRight, FlaskConical,
-  RefreshCw, User, KeyRound, CheckCircle2,
+  RefreshCw, User, KeyRound, CheckCircle2, Building2, ChevronDown,
 } from 'lucide-react'
 import { login, register, sendOtp, verifyOtp, googleAuth, forgotPassword, resetPassword } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -122,6 +122,8 @@ export default function AuthPage({ mode }) {
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [consent, setConsent] = useState(false)
+  const [organization, setOrganization] = useState('')
+  const [role, setRole] = useState('')
   const [loading, setLoading] = useState(false)
 
   const [view, setView] = useState('form')
@@ -169,7 +171,7 @@ export default function AuthPage({ mode }) {
     setLoading(true)
     try {
       if (isRegister) {
-        const res = await register(username, email, password, consent)
+        const res = await register(username, email, password, consent, organization || undefined, role || undefined)
         setOtpEmail(res.data.email || email)
         setView('verify-otp')
         setResendCooldown(60)
@@ -483,6 +485,58 @@ export default function AuthPage({ mode }) {
                       className="input-field pl-11" placeholder="yourname"
                       minLength={2} maxLength={50} required={isRegister}
                     />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {isRegister && (
+                <motion.div
+                  key="org-field"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <label className="label-text">Organization Name</label>
+                  <div className="relative mt-1">
+                    <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text" value={organization}
+                      onChange={(e) => setOrganization(e.target.value)}
+                      className="input-field pl-11" placeholder="University / Company / Lab"
+                      maxLength={255}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {isRegister && (
+                <motion.div
+                  key="role-field"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden"
+                >
+                  <label className="label-text">Role</label>
+                  <div className="relative mt-1">
+                    <ChevronDown size={16} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                    <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                      className="input-field appearance-none pr-10"
+                    >
+                      <option value="">Select your role…</option>
+                      <option value="professor">Professor</option>
+                      <option value="researcher">Researcher</option>
+                      <option value="student">Student</option>
+                      <option value="industry_scientist">Industry Scientist</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                 </motion.div>
               )}
