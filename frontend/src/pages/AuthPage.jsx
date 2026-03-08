@@ -490,6 +490,17 @@ export default function AuthPage({ mode }) {
               )}
             </AnimatePresence>
 
+            <div>
+              <label className="label-text">Email address</label>
+              <div className="relative mt-1">
+                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  className="input-field pl-11" placeholder="you@lab.com" required
+                />
+              </div>
+            </div>
+
             <AnimatePresence>
               {isRegister && (
                 <motion.div
@@ -528,7 +539,7 @@ export default function AuthPage({ mode }) {
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
-                      className="input-field appearance-none pr-10"
+                      className="input-field appearance-none pr-10 backdrop-blur-sm bg-surface-800/80"
                     >
                       <option value="">Select your role…</option>
                       <option value="professor">Professor</option>
@@ -541,17 +552,6 @@ export default function AuthPage({ mode }) {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            <div>
-              <label className="label-text">Email address</label>
-              <div className="relative mt-1">
-                <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  className="input-field pl-11" placeholder="you@lab.com" required
-                />
-              </div>
-            </div>
 
             <div>
               <label className="label-text">Password</label>

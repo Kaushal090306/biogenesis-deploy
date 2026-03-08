@@ -204,7 +204,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         )}
 
         {/* Row 5: Submit */}
-        <div>
+        <div className="flex flex-col items-end gap-1.5">
           <button
             type="submit"
             disabled={loading || userTokens <= 0}
@@ -227,7 +227,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
               </>
             )}
           </button>
-          <p className="text-xs text-slate-600 text-center mt-2">
+          <p className="text-xs text-slate-600">
             {userTokens} token{userTokens !== 1 ? 's' : ''} remaining
           </p>
         </div>
@@ -320,7 +320,7 @@ function CounterField({ config, value, onChange }) {
           type="button"
           onClick={handleDecrease}
           disabled={value <= config.min}
-          className="w-10 h-10 rounded-xl bg-surface-700/60 border border-white/[0.07] text-slate-300 hover:bg-brand-900/50 hover:text-brand-300 hover:border-brand-700/50 disabled:opacity-30 transition-all flex items-center justify-center text-lg font-bold select-none"
+          className="w-8 h-8 rounded-xl bg-surface-700/60 border border-white/[0.07] text-slate-300 hover:bg-brand-900/50 hover:text-brand-300 hover:border-brand-700/50 disabled:opacity-30 transition-all flex items-center justify-center text-base font-bold select-none"
         >
           −
         </button>
@@ -331,13 +331,13 @@ function CounterField({ config, value, onChange }) {
           value={inputVal}
           onChange={handleInput}
           onBlur={handleBlur}
-          className="flex-1 text-center input-field py-2 font-mono text-brand-300 font-bold text-lg [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          className="flex-1 text-center input-field py-1.5 font-mono text-brand-300 font-bold text-base [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <button
           type="button"
           onClick={handleIncrease}
           disabled={value >= config.max}
-          className="w-10 h-10 rounded-xl bg-surface-700/60 border border-white/[0.07] text-slate-300 hover:bg-brand-900/50 hover:text-brand-300 hover:border-brand-700/50 disabled:opacity-30 transition-all flex items-center justify-center text-lg font-bold select-none"
+          className="w-8 h-8 rounded-xl bg-surface-700/60 border border-white/[0.07] text-slate-300 hover:bg-brand-900/50 hover:text-brand-300 hover:border-brand-700/50 disabled:opacity-30 transition-all flex items-center justify-center text-base font-bold select-none"
         >
           +
         </button>

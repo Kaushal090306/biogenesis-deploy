@@ -11,6 +11,7 @@ import {
 } from '../services/api'
 import ResultsPanel from '../components/ResultsPanel'
 import Navbar from '../components/Navbar'
+import { useTheme } from '../contexts/ThemeContext'
 
 const TABS = [
   { id: 'users', label: 'Users', icon: Users },
@@ -222,9 +223,9 @@ function UsersTab() {
   return (
     <div>
       {/* Search + Filters */}
-      <form onSubmit={handleSearch} className="flex flex-wrap gap-2 mb-4">
+      <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2 mb-4">
         <input
-          className="input-field flex-1 min-w-[180px]"
+          className="input-field flex-1 min-w-[180px] font-sans"
           placeholder="Search by email or username…"
           value={searchInput}
           onChange={e => setSearchInput(e.target.value)}
@@ -232,7 +233,7 @@ function UsersTab() {
         <select
           value={planFilter}
           onChange={e => { setPlanFilter(e.target.value); setPage(1) }}
-          className="input-field w-32"
+          className="input-field w-32 font-sans"
         >
           <option value="">All Plans</option>
           <option value="free">Free</option>
@@ -242,7 +243,7 @@ function UsersTab() {
         <select
           value={verifiedFilter}
           onChange={e => { setVerifiedFilter(e.target.value); setPage(1) }}
-          className="input-field w-36"
+          className="input-field w-36 font-sans"
         >
           <option value="">All Verified</option>
           <option value="true">Verified</option>
@@ -251,7 +252,7 @@ function UsersTab() {
         <select
           value={adminFilter}
           onChange={e => { setAdminFilter(e.target.value); setPage(1) }}
-          className="input-field w-32"
+          className="input-field w-32 font-sans"
         >
           <option value="">All Roles</option>
           <option value="true">Admins</option>
@@ -363,10 +364,10 @@ function PredictionsTab() {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <input
           type="number"
-          className="input-field w-40"
+          className="input-field w-40 font-sans"
           placeholder="Filter by User ID…"
           value={userIdFilter}
           onChange={e => { setUserIdFilter(e.target.value); setPage(1) }}
@@ -374,7 +375,7 @@ function PredictionsTab() {
         <select
           value={statusFilter}
           onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
-          className="input-field w-36"
+          className="input-field w-36 font-sans"
         >
           <option value="">All Statuses</option>
           <option value="done">Done</option>
@@ -437,9 +438,10 @@ function PredictionsTab() {
 // ── Main AdminPage ────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('users')
+  const { isDark } = useTheme()
 
   return (
-    <div className="min-h-screen bg-surface-900 text-white">
+    <div className={`min-h-screen bg-surface-900 text-white${isDark ? '' : ' theme-light'}`}>
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pt-24">
         {/* Header */}
