@@ -196,3 +196,5 @@ Copy the `whsec_...` secret into `STRIPE_WEBHOOK_SECRET` in `.env`.
 3. Run `alembic upgrade head` in CI before deploying
 4. Use a managed PostgreSQL (e.g. Supabase, Neon, RDS)
 5. Store `.env` secrets in your hosting platform's secret manager (not in repo)
+
+# biogenesis-deploy
