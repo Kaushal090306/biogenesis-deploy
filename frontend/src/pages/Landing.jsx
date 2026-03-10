@@ -250,7 +250,7 @@ export default function Landing() {
           </a>
 
           {/* Desktop nav links — centered pill style */}
-          <div className="hidden md:flex items-center gap-1 bg-white/[0.03] rounded-2xl px-2 py-1.5">
+          <div className="hidden md:flex items-center gap-1">
             {[['#how-it-works', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
               <a
                 key={href}
@@ -345,7 +345,7 @@ export default function Landing() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="pt-24 sm:pt-28 pb-12 sm:pb-16 px-4 sm:px-6">
+      <section className="min-h-screen pt-24 sm:pt-28 pb-12 sm:pb-16 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
