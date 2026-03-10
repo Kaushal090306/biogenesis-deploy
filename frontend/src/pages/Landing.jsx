@@ -91,28 +91,55 @@ const HOW_DETAILS = [
 
 const PLANS = [
   {
-    name: 'Free',
-    monthlyPrice: 0,
-    runs: '10 runs / month',
-    features: ['Basic generation', '50 SMILES candidates', 'CSV export', 'History (7 days)', 'Community support'],
+    key: 'starter',
+    name: 'Starter Pack',
+    priceINR: 999,
+    runs: '10 Tokens · 100 leads total',
+    audience: 'Pharmacy students, M.Pharm scholars & hobbyists',
+    features: [
+      '10 Tokens (1 token = 10 leads)',
+      'Up to 100 leads total',
+      'Full ADMET & toxicity grid',
+      'CSV report download',
+      'Structure image download',
+      'Encrypted result storage',
+    ],
     highlighted: false,
-    cta: 'Get started free',
+    cta: 'Buy Starter',
   },
   {
-    name: 'Pro',
-    monthlyPrice: 10,
-    runs: '100 runs / month',
-    features: ['Priority GPU inference', '200 SMILES candidates', 'Full history', 'Encrypted storage', 'API access', 'Email support'],
+    key: 'researcher',
+    name: 'Researcher Pack',
+    priceINR: 3999,
+    runs: '50 Tokens · 500 leads total',
+    audience: 'PhD candidates, faculty & IPR / patent agents',
+    features: [
+      '50 Tokens (1 token = 10 leads)',
+      'Up to 500 leads total',
+      'Full ADMET & toxicity grid',
+      'CSV report download',
+      'Structure image download',
+      'Priority support',
+    ],
     highlighted: true,
-    cta: 'Start Pro trial',
+    cta: 'Buy Researcher',
   },
   {
-    name: 'Enterprise',
-    monthlyPrice: null,
-    runs: 'Unlimited',
-    features: ['Dedicated compute cluster', 'Custom model fine-tuning', 'SLA guarantee (99.9%)', 'SSO / SAML', 'On-prem deployment', 'Dedicated engineer'],
+    key: 'pharma',
+    name: 'Pharma / Lab Pack',
+    priceINR: 11999,
+    runs: '200 Tokens · 2,000 leads total',
+    audience: 'Biotech startups, manufacturers & institutional IPR cells',
+    features: [
+      '200 Tokens (1 token = 10 leads)',
+      'Up to 2,000 leads total',
+      'Full ADMET & toxicity grid',
+      'CSV report download',
+      'Structure image download',
+      'Dedicated support',
+    ],
     highlighted: false,
-    cta: 'Contact sales',
+    cta: 'Buy Pharma Pack',
   },
 ]
 
@@ -174,7 +201,7 @@ const fadeUp = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Landing() {
-  const [annual, setAnnual] = useState(false)
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -378,7 +405,7 @@ export default function Landing() {
                 className="flex flex-col sm:flex-row gap-3 mb-10"
               >
                 <Link to="/register" className="btn-primary flex items-center justify-center gap-2 text-base py-3 px-8">
-                  Start Free   10 Runs
+                  Start Free  20 Leads
                   <ArrowRight size={18} />
                 </Link>
                 <a href="#how-it-works" className="btn-outline flex items-center justify-center gap-2 text-base py-3 px-8">
@@ -398,7 +425,7 @@ export default function Landing() {
                   <CheckCircle2 size={14} className="text-brand-500" /> No credit card required
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand-500" /> 10 free runs on signup
+                  <CheckCircle2 size={14} className="text-brand-500" /> 2 free tokens on signup (each token = 10 leads)
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 size={14} className="text-brand-500" /> AES-256 encrypted
@@ -739,24 +766,7 @@ export default function Landing() {
               <span className="w-6 h-px bg-brand-600" />
             </motion.div>
             <h2 className="text-3xl md:text-4xl font-bold mb-3">Simple, transparent pricing</h2>
-            <p className="text-slate-400 mb-8">Start free. Scale as you discover.</p>
-
-            {/* Billing toggle */}
-            <div className="inline-flex items-center gap-1 bg-surface-800 border border-white/[0.06] rounded-xl p-1.5">
-              <button
-                onClick={() => setAnnual(false)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${!annual ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setAnnual(true)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${annual ? 'bg-brand-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              >
-                Annual
-                <span className="text-[10px] bg-brand-900 text-brand-300 px-1.5 py-0.5 rounded font-semibold">-20%</span>
-              </button>
-            </div>
+            <p className="text-slate-400">One-time token bundles. No subscriptions, no surprises.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -780,25 +790,18 @@ export default function Landing() {
                   </div>
                 )}
                 <div className="mb-6">
-                  <div className="text-sm text-slate-400 mb-1 font-medium">{plan.name}</div>
-                  {plan.monthlyPrice !== null ? (
-                    <div className="flex items-end gap-1 mb-1">
-                      <span className="text-4xl font-extrabold text-white">
-                        ${annual ? Math.round(plan.monthlyPrice * 0.8) : plan.monthlyPrice}
-                      </span>
-                      <span className="text-slate-400 text-sm mb-1.5">/ month</span>
-                    </div>
-                  ) : (
-                    <div className="text-4xl font-extrabold text-white mb-1">Custom</div>
-                  )}
-                  <div className={`text-sm font-medium ${plan.highlighted ? 'text-brand-400' : 'text-slate-500'}`}>
-                    {plan.runs}
+                  <div className="text-sm text-white mb-1 font-medium">{plan.name}</div>
+                  <div className="flex items-end gap-1 mb-1">
+                    <span className="text-4xl font-extrabold text-white">₹{plan.priceINR.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-400 text-sm mb-1.5">one-time</span>
                   </div>
+                  <div className="text-sm font-medium text-white">{plan.runs}</div>
+                  <div className="text-xs text-slate-200 mt-1 leading-snug">{plan.audience}</div>
                 </div>
                 <ul className="space-y-3 mb-8 flex-1">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2.5 text-sm text-slate-300">
-                      <CheckCircle2 size={15} className="text-brand-500 flex-shrink-0" />
+                    <li key={f} className="flex items-center gap-2.5 text-sm text-slate-100">
+                      <CheckCircle2 size={15} className="text-brand-400 flex-shrink-0" />
                       {f}
                     </li>
                   ))}
@@ -832,7 +835,7 @@ export default function Landing() {
                 Ready to accelerate discovery?
               </h2>
               <p className="text-slate-400 text-base sm:text-lg mb-8 max-w-xl mx-auto">
-                Join researchers worldwide. Your first 10 runs are completely free   no credit card required.
+                Join researchers worldwide. Get 2 free tokens on signup (each token = 10 leads). Try two 10-lead runs — no credit card required.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/register" className="btn-primary flex items-center justify-center gap-2 text-base py-3 px-10">

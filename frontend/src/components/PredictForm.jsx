@@ -11,11 +11,8 @@ const SLIDER_CONFIG = [
   { key: 'temperature', label: 'Generation Temperature', min: 0.1, max: 2.0, step: 0.05, default: 0.8, desc: 'Controls diversity. Higher = more creative molecules.' },
   { key: 'min_smiles_len', label: 'Min SMILES Length', min: 10, max: 100, step: 1, default: 40, desc: 'Minimum molecule size.' },
   { key: 'max_smiles_len', label: 'Max SMILES Length', min: 50, max: 200, step: 1, default: 100, desc: 'Maximum molecule size.' },
-  { key: 'num_leads', label: 'Number of Leads', min: 1, max: 300, step: 1, default: 9, desc: 'How many drug candidates to generate.' },
+  { key: 'num_leads', label: 'Number of Leads', min: 10, max: 300, step: 10, default: 10, desc: 'How many drug candidates to generate. Must be a multiple of 10 (1 token = 10 leads).' },
 ]
-
-const FREE_LEADS_MAX = 10
-const PRO_LEADS_MAX = 300
 
 export default function PredictForm({ onResult, onTokensExhausted, userTokens, userPlan = 'free', onClearResult, onUpgrade }) {
   const [sequence, setSequence] = useState('')
@@ -24,9 +21,6 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
   )
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
-
-  const isPro = userPlan && userPlan !== 'free'
-  const maxLeads = isPro ? PRO_LEADS_MAX : FREE_LEADS_MAX
 
   function setParam(key, val) {
     setParams((p) => ({ ...p, [key]: parseFloat(val) }))
@@ -43,7 +37,9 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
     const trimmed = sequence.trim()
     if (!trimmed) { toast.error('Please enter a protein sequence.'); return }
     if (trimmed.length < 10) { toast.error('Sequence must be at least 10 amino acid residues.'); return }
-    if (userTokens <= 0) { onTokensExhausted(); return }
+    const requestedLeads = Math.round(params.num_leads)
+    const tokensNeeded = Math.ceil(requestedLeads / 10)
+    if (userTokens < tokensNeeded) { onTokensExhausted(); toast.error('Not enough tokens for this run. Please top-up.'); return }
 
     setLoading(true)
     setProgress('Encoding protein with ESM2…')
@@ -81,7 +77,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
       toast.dismiss(toastId)
       if (err.response?.status === 402) {
         onTokensExhausted()
-        toast.error('No tokens remaining. Please upgrade your plan.')
+        toast.error(err.response?.data?.detail || 'Not enough tokens. Please top-up.')
       } else if (err.response?.status === 403) {
         toast.error(err.response?.data?.detail || 'Lead limit reached for your plan. Upgrade to Pro.')
         onUpgrade?.()
@@ -184,24 +180,17 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         {/* Row 4: Number of Leads counter */}
         {(() => {
           const s = SLIDER_CONFIG.find((c) => c.key === 'num_leads')
-          const cfg = { ...s, max: maxLeads }
           return (
             <CounterField
-              config={cfg}
-              value={Math.min(params.num_leads, cfg.max)}
+              config={s}
+              value={params.num_leads}
               onChange={(v) => setParam('num_leads', v)}
             />
           )
         })()}
-        {!isPro && (
-          <p className="text-xs text-amber-500/80 -mt-2">
-            Free tier: max {FREE_LEADS_MAX} leads per run.{' '}
-            <button type="button" onClick={onUpgrade} className="underline hover:text-amber-400 transition-colors">
-              Upgrade to Pro
-            </button>{' '}
-            for up to {PRO_LEADS_MAX}.
-          </p>
-        )}
+        <p className="text-xs text-slate-600 -mt-2">
+          1 token = 10 leads · min 10 leads per run
+        </p>
 
         {/* Row 5: Submit */}
         <div>
@@ -229,6 +218,9 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
           </button>
           <p className="text-xs text-slate-600 text-center mt-2">
             {userTokens} token{userTokens !== 1 ? 's' : ''} remaining
+          </p>
+          <p className="text-xs text-slate-500 text-center mt-1">
+            This run costs {Math.ceil(Math.round(params.num_leads) / 10)} token{Math.ceil(Math.round(params.num_leads) / 10) !== 1 ? 's' : ''} ({Math.round(params.num_leads)} leads)
           </p>
         </div>
 
@@ -285,10 +277,13 @@ function CounterField({ config, value, onChange }) {
     setInputVal(String(Math.round(value)))
   }, [value])
 
-  function clamp(v) { return Math.min(Math.max(v, config.min), config.max) }
+  const step = config.step || 1
 
-  function handleDecrease() { onChange(clamp(Math.round(value) - 1)) }
-  function handleIncrease() { onChange(clamp(Math.round(value) + 1)) }
+  function clamp(v) { return Math.min(Math.max(v, config.min), config.max) }
+  function snapToStep(v) { return Math.round(v / step) * step }
+
+  function handleDecrease() { onChange(clamp(snapToStep(value) - step)) }
+  function handleIncrease() { onChange(clamp(snapToStep(value) + step)) }
 
   function handleInput(e) {
     setInputVal(e.target.value)
@@ -298,8 +293,8 @@ function CounterField({ config, value, onChange }) {
 
   function handleBlur() {
     const n = parseInt(inputVal, 10)
-    if (isNaN(n)) { const c = clamp(config.default); setInputVal(String(c)); onChange(c) }
-    else { const c = clamp(n); setInputVal(String(c)); onChange(c) }
+    if (isNaN(n)) { const c = clamp(snapToStep(config.default)); setInputVal(String(c)); onChange(c) }
+    else { const c = clamp(snapToStep(n)); setInputVal(String(c)); onChange(c) }
   }
 
   return (

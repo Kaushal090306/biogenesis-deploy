@@ -461,7 +461,7 @@ export default function AuthPage({ mode }) {
               {isRegister ? 'Create your account' : 'Welcome back'}
             </h1>
             <p className="text-slate-400 text-sm">
-              {isRegister ? 'Start with 10 free prediction runs' : 'Sign in to your research dashboard'}
+              {isRegister ? 'Start with 2 free tokens (20 leads total) on signup' : 'Sign in to your research dashboard'}
             </p>
           </>
         ),

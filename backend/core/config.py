@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     # App
     FRONTEND_URL: str = "http://localhost:5173"
-    FREE_TOKENS: int = 10
+    FREE_TOKENS: int = 2
     RATE_LIMIT_PER_MINUTE: int = 5
 
     # Google OAuth

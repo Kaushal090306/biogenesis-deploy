@@ -148,7 +148,7 @@ App: http://localhost:5173
 |---|---|---|---|
 | `POST` | `/api/auth/register` | — | Register (email + password + consent) |
 | `POST` | `/api/auth/login` | — | Login → JWT |
-| `POST` | `/api/predict` | JWT | Run ML pipeline (1 token) |
+| `POST` | `/api/predict` | JWT | Run ML pipeline (cost: 1 token = 10 leads; tokens deducted per request) |
 | `GET` | `/api/dashboard/me` | JWT | Get user profile + token balance |
 | `GET` | `/api/dashboard/history` | JWT | Paginated prediction history |
 | `POST` | `/api/dashboard/checkout` | JWT | Create Stripe checkout session |

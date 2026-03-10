@@ -6,14 +6,17 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Amount in paise (INR). 1 INR = 100 paise.
+# We offer token bundles (one-time purchases) — keys are plan slugs used by the frontend.
 PLAN_AMOUNT_MAP = {
-    "pro": 79900,        # ₹799/month
-    "enterprise": 299900,  # ₹2999/month
+    "starter": 99900,     # ₹999 — Starter Pack (10 tokens)
+    "researcher": 399900, # ₹3,999 — Researcher Pack (50 tokens)
+    "pharma": 1199900,    # ₹11,999 — Pharma / Lab Pack (200 tokens)
 }
 
 PLAN_TOKENS_MAP = {
-    "pro": 100,
-    "enterprise": 99999,
+    "starter": 10,
+    "researcher": 50,
+    "pharma": 200,
 }
 
 

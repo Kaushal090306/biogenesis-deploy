@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useAuth } from '@/contexts/AuthContext'
 import { motion } from 'framer-motion'
 import { Download, ChevronUp, ChevronDown, Dna, FlaskConical, FileSpreadsheet, Image as ImageIcon, ArrowUp } from 'lucide-react'
 
