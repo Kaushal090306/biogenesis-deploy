@@ -241,7 +241,7 @@ select.input-field option {
 .theme-light .discovery-btn .discovery-btn-icon svg { color: #0f766e !important; }
 
 /* Brand-coloured badge text stays on brand */
-.theme-light .text-brand-300, .theme-light .text-brand-400 { color: #0d9488 !important; }
+.theme-light .text-brand-300, .theme-light .text-brand-400 { color: #04837a !important; }
 .theme-light .text-brand-500 { color: #0d9488 !important; }
 
 /* Amber warning text */
@@ -295,4 +295,39 @@ select.input-field option {
 .theme-light nav .glass-card button:last-child:hover {
   color: #7f1d1d !important;
   background: rgba(190, 18, 60, 0.1) !important;
+}
+
+/* Fix: navbar plan badge (enterprise=purple, pro=sky, free=slate) — readable on white */
+.theme-light .text-purple-300 { color: #6b21a8 !important; }
+.theme-light .bg-purple-900\/30 { background-color: rgba(233, 213, 255, 0.6) !important; }
+.theme-light .border-purple-700\/30 { border-color: rgba(126, 34, 206, 0.35) !important; }
+
+.theme-light .text-sky-300 { color: #0369a1 !important; }
+.theme-light .bg-sky-900\/30 { background-color: rgba(186, 230, 253, 0.6) !important; }
+.theme-light .border-sky-700\/30 { border-color: rgba(3, 105, 161, 0.35) !important; }
+
+/* Fix: destructive (rose/red) icon buttons keep their colour in light mode */
+.theme-light .text-rose-500 { color: #e11d48 !important; }
+.theme-light .text-rose-400 { color: #fb7185 !important; }
+.theme-light .hover\:text-rose-400:hover { color: #fb7185 !important; }
+
+/* Fix: btn-outline (refresh / clear filters button) visibility in light mode */
+.theme-light .btn-outline {
+  border-color: rgba(13, 148, 136, 0.55) !important;
+  color: #0d9488 !important;
+}
+.theme-light .btn-outline:hover {
+  border-color: #0d9488 !important;
+  color: #0f766e !important;
+}
+
+/* Fix: select dropdown arrow in light mode — replace native arrow with crisp SVG */
+.theme-light select.input-field {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2.25rem;
 }
