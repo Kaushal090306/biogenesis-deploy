@@ -11,7 +11,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     username: Mapped[str | None] = mapped_column(String(100), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    tokens_left: Mapped[int] = mapped_column(Integer, default=10)
+    tokens_left: Mapped[int] = mapped_column(Integer, default=2)
     plan: Mapped[str] = mapped_column(String(50), default="free")
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)

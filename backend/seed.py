@@ -17,7 +17,7 @@ from sqlalchemy import select
 TEST_USERS = [
     {"email": "admin@biogenesis.ai", "password": "AdminPass123!", "plan": "enterprise", "tokens": 99999},
     {"email": "pro@biogenesis.ai", "password": "ProPass123!", "plan": "pro", "tokens": 100},
-    {"email": "free@biogenesis.ai", "password": "FreePass123!", "plan": "free", "tokens": 10},
+    {"email": "free@biogenesis.ai", "password": "FreePass123!", "plan": "free", "tokens": 2},
 ]
 
 

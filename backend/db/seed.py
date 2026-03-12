@@ -16,7 +16,7 @@ from core.config import get_settings
 settings = get_settings()
 
 TEST_USERS = [
-    {"email": "free_user@test.com",       "password": "Test1234!", "plan": "free",       "tokens": 10},
+    {"email": "free_user@test.com",       "password": "Test1234!", "plan": "free",       "tokens": 2},
     {"email": "pro_user@test.com",        "password": "Test1234!", "plan": "pro",        "tokens": 100},
     {"email": "enterprise@test.com",      "password": "Test1234!", "plan": "enterprise", "tokens": 99999},
     {"email": "empty_tokens@test.com",    "password": "Test1234!", "plan": "free",       "tokens": 0},

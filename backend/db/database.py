@@ -1,10 +1,18 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 from core.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(settings.DATABASE_URL, echo=False, pool_pre_ping=True)
+is_pgbouncer_pooler = "pooler.supabase.com" in settings.DATABASE_URL or ":6543/" in settings.DATABASE_URL
+engine_kwargs = {"echo": False, "pool_pre_ping": True}
+if is_pgbouncer_pooler:
+    # pgbouncer transaction pooling is incompatible with asyncpg statement cache.
+    engine_kwargs["connect_args"] = {"statement_cache_size": 0}
+    engine_kwargs["poolclass"] = NullPool
+
+engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
@@ -25,7 +33,7 @@ async def create_tables():
         from sqlalchemy import text
         for sql in [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(100)",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens_left INTEGER DEFAULT 10",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS tokens_left INTEGER DEFAULT 2",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT 'free'",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255)",
