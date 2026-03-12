@@ -430,7 +430,7 @@ export default function Landing() {
                   <CheckCircle2 size={14} className="text-brand-500" /> No credit card required
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand-500" /> 2 free tokens on signup (each token = 10 leads)
+                  <CheckCircle2 size={14} className="text-brand-500" /> 10 free tokens on signup (each token = 10 leads)
                 </span>
                 <span className="flex items-center gap-1.5">
                   <CheckCircle2 size={14} className="text-brand-500" /> AES-256 encrypted
@@ -846,7 +846,7 @@ export default function Landing() {
                 Ready to accelerate discovery?
               </h2>
               <p className="text-slate-400 text-base sm:text-lg mb-8 max-w-xl mx-auto">
-                Join researchers worldwide. Get 2 free tokens on signup (each token = 10 leads). Try two 10-lead runs — no credit card required.
+                Join researchers worldwide. Get 10 free tokens on signup (each token = 10 leads). Try ten 10-lead runs — no credit card required.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/register" className="btn-primary flex items-center justify-center gap-2 text-base py-3 px-10">
