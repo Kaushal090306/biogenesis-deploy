@@ -213,7 +213,7 @@ export default function ResultsPanel({ result }) {
                         ) : col.key === 'toxicity' ? (
                           <span className={val === 'Safe' ? 'text-green-400 font-semibold' : 'text-amber-400 font-semibold'}>{val}</span>
                         ) : col.key === 'hia_absorption' || col.key === 'bbb_permeability' ? (
-                          <span className={val === 'High' ? 'text-brand-300 font-semibold' : 'text-slate-500'}>{val}</span>
+                          <span className={val === 'High' ? 'text-brand-300 font-semibold' : 'text-amber-400 font-semibold'}>{val}</span>
                         ) : col.key === 'activity_class' ? (
                           <span className={`px-2 py-0.5 rounded-full ${
                             val === 'Inhibitor' ? 'bg-rose-900/50 text-rose-300' : 'bg-green-900/50 text-green-300'
