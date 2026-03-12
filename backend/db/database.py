@@ -5,7 +5,7 @@ from core.config import get_settings
 
 settings = get_settings()
 
-is_pgbouncer_pooler = "pooler.supabase.com" in settings.DATABASE_URL or ":6543/" in settings.DATABASE_URL
+is_pgbouncer_pooler = "pooler.supabase.com" in settings.DATABASE_URL or ":6543" in settings.DATABASE_URL
 engine_kwargs = {"echo": False, "pool_pre_ping": True}
 if is_pgbouncer_pooler:
     # pgbouncer transaction pooling is incompatible with asyncpg statement cache.
