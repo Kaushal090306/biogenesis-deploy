@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 import { WavyBackground } from '@/components/ui/wavy-background'
 import RotatingText from '@/components/ui/RotatingText'
+import { useAuth } from '../contexts/AuthContext'
+import { createCheckout, verifyCheckout } from '../services/api'
 import {
   ArrowRight, Shield, Zap, Database, FlaskConical, ChevronRight,
   CheckCircle2, Star, BarChart3, Target, ChevronDown, Menu, X,
@@ -201,9 +204,11 @@ const fadeUp = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Landing() {
-
+  const { user } = useAuth()
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
@@ -806,12 +811,18 @@ export default function Landing() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to="/register"
-                  className={plan.highlighted ? 'btn-primary text-center text-sm' : 'btn-outline text-center text-sm'}
+                <button
+                  onClick={() => {
+                    if (!user) {
+                      navigate('/register')
+                    } else {
+                      setShowUpgradeModal(true)
+                    }
+                  }}
+                  className={plan.highlighted ? 'btn-primary text-center text-sm w-full' : 'btn-outline text-center text-sm w-full'}
                 >
                   {plan.cta}
-                </Link>
+                </button>
               </motion.div>
             ))}
           </div>
@@ -850,6 +861,11 @@ export default function Landing() {
           </motion.div>
         </div>
       </section>
+
+      {/* Upgrade Modal (only show when user is logged in) */}
+      {showUpgradeModal && user && (
+        <UpgradeModalComponent open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
+      )}
 
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.04] py-10 sm:py-12 px-4 sm:px-6">
@@ -897,5 +913,93 @@ export default function Landing() {
       </footer>
 
     </WavyBackground>
+  )
+}
+
+// Inline upgrade modal component for Landing page
+function UpgradeModalComponent({ open, onClose }) {
+  const { updateUser } = useAuth()
+  const [loading, setLoading] = useState(null)
+
+  async function handleUpgrade(planId) {
+    setLoading(planId)
+    try {
+      const res = await createCheckout(planId)
+      const { order_id, key_id, amount, currency } = res.data
+
+      const rzp = new window.Razorpay({
+        key: key_id,
+        amount,
+        currency,
+        name: 'PharmForge AI',
+        description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+        image: '/dna.svg',
+        order_id,
+        handler: async function (response) {
+          try {
+            const verifyRes = await verifyCheckout(
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              response.razorpay_signature,
+              planId,
+            )
+            updateUser(verifyRes.data)
+            toast.success(`🎉 Upgraded! ${verifyRes.data.tokens_left} tokens added.`)
+            onClose()
+          } catch {
+            toast.error('Payment verified but upgrade failed. Contact support.')
+          }
+        },
+        prefill: {},
+        theme: { color: '#14b8a6' },
+        modal: {
+          ondismiss: () => setLoading(null),
+        },
+      })
+      rzp.open()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start checkout.')
+      setLoading(null)
+    }
+  }
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
+        className="relative glass-card border border-white/[0.08] w-full max-w-sm p-7 rounded-2xl"
+      >
+        <h2 className="text-2xl font-bold mb-6">Choose Your Pack</h2>
+        <div className="space-y-4">
+          {PLANS.map((plan) => (
+            <div key={plan.key} className="p-4 border border-white/[0.1] rounded-lg hover:bg-white/[0.05] transition-colors">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-semibold text-white">{plan.name}</h3>
+                  <p className="text-sm text-slate-400">₹{plan.priceINR.toLocaleString('en-IN')} one-time</p>
+                </div>
+                <button
+                  onClick={() => handleUpgrade(plan.key)}
+                  disabled={loading === plan.key}
+                  className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-colors"
+                >
+                  {loading === plan.key ? '...' : 'Buy'}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">{plan.runs}</p>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-6 w-full py-2 text-slate-400 hover:text-white text-sm font-medium transition-colors"
+        >
+          Cancel
+        </button>
+      </motion.div>
+    </div>
   )
 }

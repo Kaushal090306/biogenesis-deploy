@@ -174,7 +174,7 @@ class PaginatedHistory(BaseModel):
 
 # ---------- Checkout ----------
 class CheckoutRequest(BaseModel):
-    plan: str = Field(..., pattern="^(pro|enterprise)$")
+    plan: str = Field(..., pattern="^(starter|researcher|pharma)$")
 
 
 # ---------- Health ----------
