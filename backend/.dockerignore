@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Local environments
+.venv/
+.env
+
+# Tooling cache and logs
+.pip_install.log
+backend_stdout.log
+backend_stderr.log
+
+# VCS and editor files
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Build artifacts
+*.egg-info/

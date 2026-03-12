@@ -3,10 +3,13 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 import sys, os
 
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from db.database import Base  # noqa
 from db import models  # noqa — ensure models are registered
+from core.config import get_settings
+settings = get_settings()
 
 config = context.config
 if config.config_file_name:
@@ -19,7 +22,7 @@ from core.config import get_settings
 settings = get_settings()
 # Override with sync driver for Alembic
 sync_url = settings.DATABASE_URL.replace("+asyncpg", "+psycopg2")
-config.set_main_option("sqlalchemy.url", sync_url)
+config.set_main_option("sqlalchemy.url", sync_url.replace("%", "%%"))
 
 
 def run_migrations_offline():
