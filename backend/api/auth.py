@@ -11,7 +11,7 @@ import httpx
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse, urlunparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -427,6 +427,14 @@ def _normalize_origin(origin: str | None) -> str:
     return (origin or "").strip().rstrip("/")
 
 
+def _prefer_https(url: str) -> str:
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme.lower() == "http" and host not in {"localhost", "127.0.0.1"}:
+        return urlunparse(parsed._replace(scheme="https"))
+    return url
+
+
 def _is_allowed_frontend_origin(origin: str) -> bool:
     normalized = _normalize_origin(origin)
     if not normalized:
@@ -447,13 +455,9 @@ def _is_allowed_frontend_origin(origin: str) -> bool:
 def _google_callback_redirect_uri(request: Request) -> str:
     configured = (settings.GOOGLE_REDIRECT_URI or "").strip()
     if configured:
-        if configured.startswith("http://") and "localhost" not in configured and "127.0.0.1" not in configured:
-            configured = f"https://{configured[len('http://'):]}"
-        return configured
+        return _prefer_https(configured)
 
-    base_url = str(request.base_url).rstrip("/")
-    if base_url.startswith("http://") and "localhost" not in base_url and "127.0.0.1" not in base_url:
-        base_url = f"https://{base_url[len('http://'):]}"
+    base_url = _prefer_https(str(request.base_url).rstrip("/"))
 
     return f"{base_url}/api/auth/google/callback"
 
