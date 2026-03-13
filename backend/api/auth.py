@@ -13,7 +13,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from urllib.parse import urlencode, urlparse, urlunparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -317,7 +317,7 @@ async def _send_password_changed_email(to_email: str) -> None:
 # ─────────────────────────── register ─────────────────────────────────────────
 
 @router.post("/register", response_model=OtpRequiredResponse, status_code=status.HTTP_201_CREATED)
-async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(payload: RegisterRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     if not payload.consent:
         raise HTTPException(status_code=400, detail="You must accept the scientific data consent to register.")
 
@@ -345,14 +345,15 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     await db.refresh(user)
 
-    otp_sent = await _send_otp_email(payload.email, otp)
-    delivery = "email" if otp_sent else "unavailable"
-    logger.info("New user registered: %s (id=%d) — OTP delivery=%s", user.email, user.id, delivery)
+    # Send OTP in background to speed up response
+    background_tasks.add_task(_send_otp_email, payload.email, otp)
+    
+    logger.info("New user registered: %s (id=%d) — OTP delivery started in background", user.email, user.id)
 
     return OtpRequiredResponse(
         email=payload.email,
-        otp_delivery=delivery,
-        debug_otp=otp if (not otp_sent and settings.EXPOSE_OTP_IN_RESPONSE) else None,
+        otp_delivery="email",
+        debug_otp=otp if (settings.EXPOSE_OTP_IN_RESPONSE) else None,
     )
 
 
