@@ -6,12 +6,16 @@ import smtplib
 import asyncio
 import functools
 import socket
+import json
 import httpx
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -33,6 +37,9 @@ settings = get_settings()
 OTP_EXPIRE_MINUTES = 10
 FREE_TIER_TOKENS = 2
 RESEND_API_URL = "https://api.resend.com/emails"
+GOOGLE_OAUTH_AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_STATE_EXPIRE_MINUTES = 10
 
 if settings.FREE_TOKENS != FREE_TIER_TOKENS:
     logger.warning(
@@ -416,8 +423,103 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 # ─────────────────────────── google OAuth ─────────────────────────────────────
 
-@router.post("/google", response_model=TokenResponse)
-async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+def _normalize_origin(origin: str | None) -> str:
+    return (origin or "").strip().rstrip("/")
+
+
+def _is_allowed_frontend_origin(origin: str) -> bool:
+    normalized = _normalize_origin(origin)
+    if not normalized:
+        return False
+
+    allowed = {
+        _normalize_origin(settings.FRONTEND_URL),
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://pharmforgeai.vercel.app",
+    }
+    if normalized in allowed:
+        return True
+
+    return normalized.startswith("https://") and normalized.endswith(".vercel.app")
+
+
+def _google_callback_redirect_uri(request: Request) -> str:
+    configured = (settings.GOOGLE_REDIRECT_URI or "").strip()
+    if configured:
+        return configured
+    return f"{str(request.base_url).rstrip('/')}/api/auth/google/callback"
+
+
+def _encode_google_state(frontend_origin: str) -> str:
+    payload = {
+        "frontend_origin": frontend_origin,
+        "nonce": secrets.token_urlsafe(16),
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=GOOGLE_STATE_EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+
+
+def _decode_google_state(state: str) -> str:
+    try:
+        payload = jwt.decode(state, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Invalid Google sign-in state.")
+
+    frontend_origin = _normalize_origin(payload.get("frontend_origin"))
+    if not _is_allowed_frontend_origin(frontend_origin):
+        raise HTTPException(status_code=400, detail="Invalid Google sign-in origin.")
+    return frontend_origin
+
+
+def _google_popup_html(
+    frontend_origin: str,
+    *,
+    success: bool,
+    access_token: str | None = None,
+    user: dict | None = None,
+    error: str | None = None,
+) -> str:
+    payload = {
+        "type": "pharmforge_google_auth",
+        "success": success,
+    }
+    if access_token:
+        payload["access_token"] = access_token
+    if user is not None:
+        payload["user"] = user
+    if error:
+        payload["error"] = error
+
+    target_origin = frontend_origin if _is_allowed_frontend_origin(frontend_origin) else "*"
+    payload_json = json.dumps(payload)
+    target_origin_json = json.dumps(target_origin)
+
+    return f"""
+<!doctype html>
+<html>
+  <head><meta charset=\"utf-8\"><title>Google Sign-In</title></head>
+  <body>
+    <script>
+      (function() {{
+        const payload = {payload_json};
+        const targetOrigin = {target_origin_json};
+        try {{
+          if (window.opener && !window.opener.closed) {{
+            window.opener.postMessage(payload, targetOrigin);
+          }}
+        }} finally {{
+          window.close();
+        }}
+      }})();
+    </script>
+    <p>You can close this window.</p>
+  </body>
+</html>
+"""
+
+
+def _verify_google_credential(credential: str) -> dict:
     if not settings.GOOGLE_CLIENT_ID:
         logger.warning("Google sign-in attempted but GOOGLE_CLIENT_ID is not configured")
         raise HTTPException(status_code=503, detail="Google sign-in is not configured on server.")
@@ -430,8 +532,8 @@ async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get
         raise HTTPException(status_code=503, detail="Google sign-in is temporarily unavailable.")
 
     try:
-        idinfo = id_token.verify_oauth2_token(
-            payload.credential,
+        return id_token.verify_oauth2_token(
+            credential,
             google_requests.Request(),
             settings.GOOGLE_CLIENT_ID,
         )
@@ -439,11 +541,8 @@ async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get
         logger.warning("Google token verification failed: %s", exc)
         raise HTTPException(status_code=400, detail="Invalid Google token.")
 
-    google_email: str = idinfo.get("email", "")
-    google_sub: str = idinfo.get("sub", "")
-    if not google_email:
-        raise HTTPException(status_code=400, detail="Google account has no email.")
 
+async def _upsert_google_user(db: AsyncSession, google_email: str, google_sub: str) -> db_models.User:
     # Find existing user by google_id or email
     result = await db.execute(
         select(db_models.User).where(
@@ -453,31 +552,166 @@ async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get
     user = result.scalar_one_or_none()
 
     if user:
-        # Update google_id if missing
         if not user.google_id:
             user.google_id = google_sub
         user.email_verified = True
         await db.commit()
         await db.refresh(user)
-    else:
-        # Create new user (no password required for Google accounts)
-        user = db_models.User(
-            email=google_email,
-            password_hash="",          # Google-only account
-            google_id=google_sub,
-            tokens_left=FREE_TIER_TOKENS,
-            plan="free",
-            consent_given=True,
-            email_verified=True,
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        logger.info("New Google user registered: %s", user.email)
-        asyncio.create_task(_send_welcome_email(user.email, user.username or ""))
+        return user
 
+    user = db_models.User(
+        email=google_email,
+        password_hash="",  # Google-only account
+        google_id=google_sub,
+        tokens_left=FREE_TIER_TOKENS,
+        plan="free",
+        consent_given=True,
+        email_verified=True,
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    logger.info("New Google user registered: %s", user.email)
+    asyncio.create_task(_send_welcome_email(user.email, user.username or ""))
+    return user
+
+
+@router.post("/google", response_model=TokenResponse)
+async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    idinfo = _verify_google_credential(payload.credential)
+
+    google_email: str = idinfo.get("email", "")
+    google_sub: str = idinfo.get("sub", "")
+    if not google_email:
+        raise HTTPException(status_code=400, detail="Google account has no email.")
+
+    user = await _upsert_google_user(db, google_email, google_sub)
     token = create_access_token(str(user.id))
     return TokenResponse(access_token=token, user=UserPublic.model_validate(user))
+
+
+@router.get("/google/start")
+async def google_start(request: Request, frontend_origin: str | None = None):
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured on server.")
+
+    desired_origin = _normalize_origin(frontend_origin) or _normalize_origin(settings.FRONTEND_URL)
+    if not _is_allowed_frontend_origin(desired_origin):
+        raise HTTPException(status_code=400, detail="Unsupported frontend origin for Google sign-in.")
+
+    redirect_uri = _google_callback_redirect_uri(request)
+    state = _encode_google_state(desired_origin)
+    query = urlencode(
+        {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid email profile",
+            "prompt": "select_account",
+            "state": state,
+            "access_type": "online",
+            "include_granted_scopes": "true",
+        }
+    )
+
+    return RedirectResponse(url=f"{GOOGLE_OAUTH_AUTHORIZE_URL}?{query}", status_code=302)
+
+
+@router.get("/google/callback", response_class=HTMLResponse)
+async def google_callback(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+):
+    frontend_origin = _normalize_origin(settings.FRONTEND_URL)
+    if state:
+        try:
+            frontend_origin = _decode_google_state(state)
+        except HTTPException as exc:
+            return HTMLResponse(
+                _google_popup_html(frontend_origin, success=False, error=str(exc.detail)),
+                status_code=400,
+            )
+
+    if error:
+        logger.warning("Google OAuth callback returned error=%s", error)
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Google sign-in was cancelled or denied."),
+            status_code=400,
+        )
+
+    if not code:
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Missing Google authorization code."),
+            status_code=400,
+        )
+
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Google sign-in is not configured on server."),
+            status_code=503,
+        )
+
+    redirect_uri = _google_callback_redirect_uri(request)
+    token_form = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "client_secret": settings.GOOGLE_CLIENT_SECRET,
+        "code": code,
+        "grant_type": "authorization_code",
+        "redirect_uri": redirect_uri,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            token_resp = await client.post(GOOGLE_OAUTH_TOKEN_URL, data=token_form)
+    except Exception as exc:
+        logger.error("Google token exchange failed: %s", exc)
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Google sign-in is temporarily unavailable."),
+            status_code=502,
+        )
+
+    if token_resp.status_code >= 400:
+        logger.error("Google token exchange rejected: status=%s body=%s", token_resp.status_code, token_resp.text[:500])
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Google sign-in failed. Please try again."),
+            status_code=400,
+        )
+
+    token_data = token_resp.json()
+    id_token_value = token_data.get("id_token")
+    if not id_token_value:
+        logger.error("Google token exchange response missing id_token")
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Google sign-in response was incomplete."),
+            status_code=400,
+        )
+
+    try:
+        idinfo = _verify_google_credential(id_token_value)
+    except HTTPException as exc:
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error=str(exc.detail)),
+            status_code=exc.status_code,
+        )
+
+    google_email: str = idinfo.get("email", "")
+    google_sub: str = idinfo.get("sub", "")
+    if not google_email:
+        return HTMLResponse(
+            _google_popup_html(frontend_origin, success=False, error="Google account has no email."),
+            status_code=400,
+        )
+
+    user = await _upsert_google_user(db, google_email, google_sub)
+    token = create_access_token(str(user.id))
+    user_payload = UserPublic.model_validate(user).model_dump(mode="json")
+    return HTMLResponse(
+        _google_popup_html(frontend_origin, success=True, access_token=token, user=user_payload),
+        status_code=200,
+    )
 
 
 # ─────────────────────────── change password ─────────────────────────────────
