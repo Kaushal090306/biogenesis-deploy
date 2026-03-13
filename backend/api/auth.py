@@ -360,7 +360,7 @@ async def register(payload: RegisterRequest, background_tasks: BackgroundTasks, 
 # ─────────────────────────── send-otp (resend) ────────────────────────────────
 
 @router.post("/send-otp", status_code=200)
-async def send_otp(payload: SendOtpRequest, db: AsyncSession = Depends(get_db)):
+async def send_otp(payload: SendOtpRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
     user = result.scalar_one_or_none()
     if not user:
@@ -375,17 +375,9 @@ async def send_otp(payload: SendOtpRequest, db: AsyncSession = Depends(get_db)):
     user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
     await db.commit()
 
-    otp_sent = await _send_otp_email(payload.email, otp)
-    if otp_sent:
-        return {"detail": "Verification code sent.", "otp_delivery": "email"}
-
-    response = {
-        "detail": "Verification code generated, but email delivery is unavailable right now.",
-        "otp_delivery": "unavailable",
-    }
-    if settings.EXPOSE_OTP_IN_RESPONSE:
-        response["debug_otp"] = otp
-    return response
+    background_tasks.add_task(_send_otp_email, payload.email, otp)
+    
+    return {"detail": "Verification code sent.", "otp_delivery": "email"}
 
 
 # ─────────────────────────── verify-otp ───────────────────────────────────────
@@ -767,6 +759,7 @@ async def google_callback(
 @router.post("/change-password", status_code=200)
 async def change_password(
     payload: ChangePasswordRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: db_models.User = Depends(get_current_user),
 ):
@@ -776,17 +769,20 @@ async def change_password(
     db.add(current_user)
     await db.commit()
     logger.info("Password changed for user: %s", current_user.email)
-    try:
-        await _send_password_changed_email(current_user.email)
-    except Exception as exc:
-        logger.error("Failed to send password-changed email: %s", exc)
+    
+    background_tasks.add_task(_send_password_changed_email, current_user.email)
+    
     return {"detail": "Password updated successfully."}
 
 
 # ─────────────────────────── forgot password ──────────────────────────────────
 
 @router.post("/forgot-password", status_code=200)
-async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
     user = result.scalar_one_or_none()
     if not user:
@@ -798,27 +794,19 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
     user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
     await db.commit()
 
-    otp_sent = await _send_reset_otp_email(payload.email, otp)
-    if otp_sent:
-        return {"detail": "Reset code sent to your email.", "otp_delivery": "email"}
-
-    if settings.EXPOSE_OTP_IN_RESPONSE:
-        return {
-            "detail": "Email delivery unavailable. Use debug_otp for testing.",
-            "otp_delivery": "unavailable",
-            "debug_otp": otp,
-        }
-
-    raise HTTPException(
-        status_code=503,
-        detail="Reset email delivery is unavailable right now. Please try again later.",
-    )
+    background_tasks.add_task(_send_reset_otp_email, payload.email, otp)
+    
+    return {"detail": "Reset code sent to your email.", "otp_delivery": "email"}
 
 
 # ─────────────────────────── reset password ───────────────────────────────────
 
 @router.post("/reset-password", status_code=200)
-async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+async def reset_password(
+    payload: ResetPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db)
+):
     result = await db.execute(select(db_models.User).where(db_models.User.email == payload.email))
     user = result.scalar_one_or_none()
     if not user:
@@ -836,10 +824,7 @@ async def reset_password(payload: ResetPasswordRequest, db: AsyncSession = Depen
     await db.commit()
     logger.info("Password reset for user: %s", user.email)
 
-    try:
-        await _send_password_changed_email(user.email)
-    except Exception as exc:
-        logger.error("Failed to send password-changed confirmation: %s", exc)
+    background_tasks.add_task(_send_password_changed_email, user.email)
 
     return {"detail": "Password reset successfully. You can now sign in."}
 
