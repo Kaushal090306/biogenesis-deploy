@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import warnings
+from collections import OrderedDict
 from typing import Optional
 
 import numpy as np
@@ -146,6 +147,7 @@ _esm_tokenizer = None
 _esm_model = None
 _device: torch.device = torch.device("cpu")
 _models_loaded: bool = False
+_esm_embed_cache: "OrderedDict[str, torch.Tensor]" = OrderedDict()
 
 
 def is_loaded() -> bool:
@@ -233,18 +235,34 @@ def load_models():
 
 @torch.no_grad()
 def _get_esm_embedding(sequence: str) -> torch.Tensor:
-    global _esm_tokenizer, _esm_model
+    global _esm_tokenizer, _esm_model, _esm_embed_cache
+    from core.config import get_settings
+    s = get_settings()
+
+    cached = _esm_embed_cache.get(sequence)
+    if cached is not None:
+        _esm_embed_cache.move_to_end(sequence)
+        return cached.to(_device)
+
     logger.debug("Computing ESM embedding …")
     # Use globally cached model; fallback-load if somehow called before startup
     if _esm_tokenizer is None or _esm_model is None:
         from transformers import AutoTokenizer, EsmModel
-        from core.config import get_settings
-        s = get_settings()
         logger.warning("ESM2 not pre-loaded — loading now (slow path)")
         _esm_tokenizer = AutoTokenizer.from_pretrained(s.HF_ESM_MODEL_NAME, token=s.HF_TOKEN or None)
         _esm_model = EsmModel.from_pretrained(s.HF_ESM_MODEL_NAME, token=s.HF_TOKEN or None).to(_device).eval()
-    inputs = _esm_tokenizer(sequence, return_tensors="pt", truncation=True, max_length=1000).to(_device)
+    inputs = _esm_tokenizer(
+        sequence,
+        return_tensors="pt",
+        truncation=True,
+        max_length=max(128, s.PRED_ESM_MAX_LENGTH),
+    ).to(_device)
     emb = _esm_model(**inputs).last_hidden_state.mean(dim=1)
+
+    _esm_embed_cache[sequence] = emb.detach().cpu()
+    cache_cap = max(1, s.PRED_EMBED_CACHE_SIZE)
+    while len(_esm_embed_cache) > cache_cap:
+        _esm_embed_cache.popitem(last=False)
     return emb
 
 
@@ -309,16 +327,27 @@ def run_prediction(
     if not _models_loaded:
         raise RuntimeError("Models not loaded yet. Try again shortly.")
 
+    from core.config import get_settings
+    s = get_settings()
+
     prot_emb = _get_esm_embedding(sequence)
 
     collected: list[dict] = []
     unique_pool: set[str] = set()
-    max_attempts = 150  # safety cap on generation loops (supports up to 300 leads)
+    max_attempts = min(max(10, s.PRED_MAX_ATTEMPTS), max(25, num_leads * 3))
+    generation_batch = min(max(80, s.PRED_GENERATION_BATCH_SIZE), max(120, num_leads * 12))
 
     attempt = 0
     while len(collected) < num_leads and attempt < max_attempts:
         attempt += 1
-        ids = _gen_model.generate(prot_emb, 500, int(max_smiles_len) + 15, temperature, 50, 0.9)
+        ids = _gen_model.generate(
+            prot_emb,
+            generation_batch,
+            int(max_smiles_len) + 15,
+            temperature,
+            50,
+            0.9,
+        )
         smis = [_vocab.decode(g).replace(" ", "") for g in ids]
         for s in smis:
             if not s or s in unique_pool:
@@ -378,8 +407,13 @@ def run_prediction(
         for _, r in df.iterrows()
     ]
     per_row = 5 if len(all_mols) > 12 else 3
+    subimg_size = max(180, s.PRED_IMAGE_SUBIMG_SIZE)
     grid_img: Image.Image = Draw.MolsToGridImage(
-        all_mols, molsPerRow=per_row, subImgSize=(400, 400), legends=legends, returnPNG=False
+        all_mols,
+        molsPerRow=per_row,
+        subImgSize=(subimg_size, subimg_size),
+        legends=legends,
+        returnPNG=False,
     )
     buf = io.BytesIO()
     grid_img.save(buf, format="PNG")
@@ -399,6 +433,8 @@ def generate_structure_image(leads: list) -> str:
     if not leads:
         return ""
     try:
+        from core.config import get_settings
+        s = get_settings()
         mols = [Chem.MolFromSmiles(r.get("smiles", "")) for r in leads]
         valid = [(m, r) for m, r in zip(mols, leads) if m is not None]
         if not valid:
@@ -409,8 +445,13 @@ def generate_structure_image(leads: list) -> str:
             for r in valid_leads
         ]
         per_row = 5 if len(mols) > 12 else 3
+        subimg_size = max(180, s.PRED_IMAGE_SUBIMG_SIZE)
         grid_img = Draw.MolsToGridImage(
-            list(mols), molsPerRow=per_row, subImgSize=(400, 400), legends=list(legends), returnPNG=False
+            list(mols),
+            molsPerRow=per_row,
+            subImgSize=(subimg_size, subimg_size),
+            legends=list(legends),
+            returnPNG=False,
         )
         buf = io.BytesIO()
         grid_img.save(buf, format="PNG")

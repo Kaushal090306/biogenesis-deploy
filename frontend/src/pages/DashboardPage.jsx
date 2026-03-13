@@ -24,8 +24,8 @@ export default function DashboardPage() {
   const [showHistory, setShowHistory] = useState(false)
 
   useEffect(() => {
-    refreshProfile()
-  }, [])
+    if (!user) refreshProfile()
+  }, [user])
 
   useEffect(() => {
     if (showHistory) fetchHistory()
