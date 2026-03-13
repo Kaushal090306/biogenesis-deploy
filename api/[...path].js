@@ -71,7 +71,7 @@ export default async function handler(req, res) {
       method,
       headers,
       body,
-      redirect: 'follow',
+      redirect: 'manual',
     })
 
     res.status(upstream.status)
@@ -81,9 +81,18 @@ export default async function handler(req, res) {
       res.setHeader('content-type', contentType)
     }
 
+    const location = upstream.headers.get('location')
+    if (location) {
+      res.setHeader('location', location)
+    }
+
     const processTime = upstream.headers.get('x-process-time-ms')
     if (processTime) {
       res.setHeader('x-process-time-ms', processTime)
+    }
+
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return res.end()
     }
 
     const text = await upstream.text()
