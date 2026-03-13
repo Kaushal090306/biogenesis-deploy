@@ -9,7 +9,7 @@ import {
 import { login, register, sendOtp, verifyOtp, googleAuth, forgotPassword, resetPassword } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
-const GOOGLE_CLIENT_ID = '538406357868-j4i5hlsbclerbp9hk929g218881h1te2.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '538406357868-j4i5hlsbclerbp9hk929g218881h1te2.apps.googleusercontent.com'
 // -- Shared card shell
 function AuthShell({ children }) {
   return (
