@@ -9,7 +9,7 @@ import {
 import { login, register, sendOtp, verifyOtp, googleAuth, forgotPassword, resetPassword } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '538406357868-j4i5hlsbclerbp9hk929g218881h1te2.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = (import.meta.env.VITE_GOOGLE_CLIENT_ID || '').trim()
 // -- Shared card shell
 function AuthShell({ children }) {
   return (
@@ -51,6 +51,16 @@ function GoogleButton({ onResponse, isRegister }) {
   useEffect(() => {
     const tryInit = () => {
       if (!window.google?.accounts?.id) return
+      if (!GOOGLE_CLIENT_ID) {
+        console.error('Google sign-in is not configured: VITE_GOOGLE_CLIENT_ID is missing.')
+        return
+      }
+
+      console.info('Google sign-in init', {
+        origin: window.location.origin,
+        clientId: GOOGLE_CLIENT_ID,
+      })
+
       window.google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: onResponse,
@@ -76,6 +86,11 @@ function GoogleButton({ onResponse, isRegister }) {
   }, [onResponse, isRegister])
 
   const handleClick = () => {
+    if (!GOOGLE_CLIENT_ID) {
+      toast.error('Google sign-in is not configured on this deployment.')
+      return
+    }
+
     const btn = hiddenRef.current?.querySelector('[role="button"]')
       || hiddenRef.current?.querySelector('div > div')
       || hiddenRef.current?.firstElementChild
