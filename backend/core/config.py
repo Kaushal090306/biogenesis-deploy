@@ -29,11 +29,6 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     FREE_TOKENS: int = 2
     RATE_LIMIT_PER_MINUTE: int = 5
-    PRED_ESM_MAX_LENGTH: int = 800
-    PRED_GENERATION_BATCH_SIZE: int = 240
-    PRED_MAX_ATTEMPTS: int = 90
-    PRED_IMAGE_SUBIMG_SIZE: int = 320
-    PRED_EMBED_CACHE_SIZE: int = 32
 
     # Google OAuth
     GOOGLE_CLIENT_ID: str = ""
