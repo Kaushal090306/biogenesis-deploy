@@ -3,7 +3,6 @@
 A production-grade SaaS platform that migrates the BioGenesis Gradio space into a secure full-stack application. ML models run server-side only — no code or weights are ever exposed to the browser.
 
 ---
-
 ## Architecture
 
 ```
