@@ -448,7 +448,12 @@ def _google_callback_redirect_uri(request: Request) -> str:
     configured = (settings.GOOGLE_REDIRECT_URI or "").strip()
     if configured:
         return configured
-    return f"{str(request.base_url).rstrip('/')}/api/auth/google/callback"
+
+    base_url = str(request.base_url).rstrip("/")
+    if base_url.startswith("http://") and "localhost" not in base_url and "127.0.0.1" not in base_url:
+        base_url = f"https://{base_url[len('http://'):]}"
+
+    return f"{base_url}/api/auth/google/callback"
 
 
 def _encode_google_state(frontend_origin: str) -> str:
