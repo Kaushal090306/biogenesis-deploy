@@ -202,17 +202,23 @@ async def _send_email_via_resend(to_email: str, subject: str, html: str) -> bool
     if not settings.RESEND_API_KEY:
         return False
 
-    sender = settings.RESEND_FROM_EMAIL or settings.SMTP_USER
-    if not sender:
-        logger.error("RESEND_FROM_EMAIL is required when using Resend email delivery")
+    configured_sender = (settings.RESEND_FROM_EMAIL or "").strip()
+    smtp_sender = (settings.SMTP_USER or "").strip()
+    candidate_senders: list[str] = []
+
+    if configured_sender:
+        candidate_senders.append(configured_sender)
+    elif smtp_sender:
+        candidate_senders.append(smtp_sender)
+
+    # Resend provides a built-in sender for testing and quick setup.
+    if "onboarding@resend.dev" not in candidate_senders:
+        candidate_senders.append("onboarding@resend.dev")
+
+    if not candidate_senders:
+        logger.error("No sender is available for Resend email delivery")
         return False
 
-    payload = {
-        "from": f"PharmForge AI <{sender}>",
-        "to": [to_email],
-        "subject": subject,
-        "html": html,
-    }
     headers = {
         "Authorization": f"Bearer {settings.RESEND_API_KEY}",
         "Content-Type": "application/json",
@@ -220,16 +226,46 @@ async def _send_email_via_resend(to_email: str, subject: str, html: str) -> bool
 
     try:
         async with httpx.AsyncClient(timeout=20) as client:
-            response = await client.post(RESEND_API_URL, headers=headers, json=payload)
-        if response.status_code >= 400:
-            logger.error(
-                "Resend API failed for %s: status=%s body=%s",
-                to_email,
-                response.status_code,
-                response.text[:500],
-            )
-            return False
-        return True
+            for sender in candidate_senders:
+                payload = {
+                    "from": f"PharmForge AI <{sender}>",
+                    "to": [to_email],
+                    "subject": subject,
+                    "html": html,
+                }
+                response = await client.post(RESEND_API_URL, headers=headers, json=payload)
+
+                if response.status_code < 400:
+                    if sender == "onboarding@resend.dev":
+                        logger.warning(
+                            "Resend used onboarding sender for %s. Configure RESEND_FROM_EMAIL with a verified domain for production.",
+                            to_email,
+                        )
+                    return True
+
+                body_preview = response.text[:500]
+                logger.error(
+                    "Resend API failed for %s via sender=%s: status=%s body=%s",
+                    to_email,
+                    sender,
+                    response.status_code,
+                    body_preview,
+                )
+
+                # If domain verification fails on custom sender, retry with onboarding fallback.
+                if response.status_code == 403 and "domain is not verified" in body_preview.lower():
+                    continue
+
+                # Invalid API key/token won't succeed with another sender.
+                if response.status_code in {401, 403}:
+                    break
+
+        logger.error(
+            "Resend delivery failed for %s after trying senders: %s",
+            to_email,
+            ", ".join(candidate_senders),
+        )
+        return False
     except Exception as exc:
         logger.error("Resend API error for %s: %s", to_email, exc)
         return False
