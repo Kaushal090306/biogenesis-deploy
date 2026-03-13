@@ -447,6 +447,8 @@ def _is_allowed_frontend_origin(origin: str) -> bool:
 def _google_callback_redirect_uri(request: Request) -> str:
     configured = (settings.GOOGLE_REDIRECT_URI or "").strip()
     if configured:
+        if configured.startswith("http://") and "localhost" not in configured and "127.0.0.1" not in configured:
+            configured = f"https://{configured[len('http://'):]}"
         return configured
 
     base_url = str(request.base_url).rstrip("/")
