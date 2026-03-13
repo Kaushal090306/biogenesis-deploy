@@ -86,6 +86,8 @@ class GoogleAuthRequest(BaseModel):
 class OtpRequiredResponse(BaseModel):
     requires_verification: bool = True
     email: str
+    otp_delivery: str = "email"
+    debug_otp: Optional[str] = None
 
 
 class TokenResponse(BaseModel):

@@ -135,6 +135,18 @@ export default function AuthPage({ mode }) {
 
   const isRegister = mode === 'register'
 
+  const showOtpDeliveryToast = useCallback((data, kind = 'verification') => {
+    if (!data || data.otp_delivery !== 'unavailable') return false
+
+    const otpLabel = kind === 'reset' ? 'reset code' : 'verification code'
+    if (data.debug_otp) {
+      toast.error(`Email service unavailable. Use this ${otpLabel}: ${data.debug_otp}`, { duration: 10000 })
+    } else {
+      toast.error('Email service unavailable right now. Please try again shortly.')
+    }
+    return true
+  }, [])
+
   useEffect(() => {
     setView('form')
     setOtp('')
@@ -175,7 +187,11 @@ export default function AuthPage({ mode }) {
         setOtpEmail(res.data.email || email)
         setView('verify-otp')
         setResendCooldown(60)
-        toast.success('Account created! Check your email for the verification code.')
+        if (!showOtpDeliveryToast(res.data, 'verification')) {
+          toast.success('Account created! Check your email for the verification code.')
+        } else {
+          toast('Account created. Continue with OTP verification.', { icon: 'INFO' })
+        }
       } else {
         try {
           const res = await login(email, password)
@@ -221,9 +237,11 @@ export default function AuthPage({ mode }) {
     if (resendCooldown > 0) return
     setLoading(true)
     try {
-      await sendOtp(otpEmail)
+      const res = await sendOtp(otpEmail)
       setResendCooldown(60)
-      toast.success('New code sent!')
+      if (!showOtpDeliveryToast(res.data, 'verification')) {
+        toast.success('New code sent!')
+      }
     } catch {
       toast.error('Could not resend. Try again.')
     } finally {
@@ -235,11 +253,13 @@ export default function AuthPage({ mode }) {
     e.preventDefault()
     setLoading(true)
     try {
-      await forgotPassword(otpEmail)
+      const res = await forgotPassword(otpEmail)
       setResendCooldown(60)
       setOtp('')
       setView('forgot-otp')
-      toast.success('Reset code sent - check your email.')
+      if (!showOtpDeliveryToast(res.data, 'reset')) {
+        toast.success('Reset code sent - check your email.')
+      }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Failed to send reset code.')
     } finally {
@@ -257,9 +277,11 @@ export default function AuthPage({ mode }) {
     if (resendCooldown > 0) return
     setLoading(true)
     try {
-      await forgotPassword(otpEmail)
+      const res = await forgotPassword(otpEmail)
       setResendCooldown(60)
-      toast.success('New reset code sent!')
+      if (!showOtpDeliveryToast(res.data, 'reset')) {
+        toast.success('New reset code sent!')
+      }
     } catch {
       toast.error('Could not resend. Try again.')
     } finally {

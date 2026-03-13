@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""   # Gmail App Password
+    EXPOSE_OTP_IN_RESPONSE: bool = False
 
 
 @lru_cache()

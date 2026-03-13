@@ -5,6 +5,7 @@ import string
 import smtplib
 import asyncio
 import functools
+import socket
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -29,6 +30,14 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 OTP_EXPIRE_MINUTES = 10
+FREE_TIER_TOKENS = 2
+
+if settings.FREE_TOKENS != FREE_TIER_TOKENS:
+    logger.warning(
+        "FREE_TOKENS=%s configured, but signup flow enforces %s tokens for free-tier users.",
+        settings.FREE_TOKENS,
+        FREE_TIER_TOKENS,
+    )
 
 
 # ─────────────────────────── helpers ──────────────────────────────────────────
@@ -110,7 +119,7 @@ def _send_welcome_email_sync(to_email: str, username: str) -> None:
       <div style="margin:24px 0;">
         <a href="http://localhost:5173" style="background:#38bdf8;color:#0f172a;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Open PharmForge AI →</a>
       </div>
-      <p style="color:#64748b;font-size:12px;">You have <strong style="color:#e2e8f0;">{settings.FREE_TOKENS} free prediction tokens</strong> to get started. Upgrade anytime for unlimited access.</p>
+    <p style="color:#64748b;font-size:12px;">You have <strong style="color:#e2e8f0;">{FREE_TIER_TOKENS} free prediction tokens</strong> to get started. Upgrade anytime for unlimited access.</p>
       <hr style="border:none;border-top:1px solid #1e293b;margin:20px 0;">
       <p style="color:#475569;font-size:11px;">PharmForge AI · pharmforgeai@gmail.com</p>
     </div>
@@ -148,21 +157,31 @@ def _send_password_changed_email_sync(to_email: str) -> None:
         smtp.sendmail(settings.SMTP_USER, to_email, msg.as_string())
 
 
-async def _send_otp_email(to_email: str, otp: str) -> None:
+async def _send_otp_email(to_email: str, otp: str) -> bool:
     """Send OTP via SMTP in a thread to avoid blocking the event loop."""
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning("SMTP not configured — OTP for %s is: %s", to_email, otp)
-        return
-    await asyncio.to_thread(_send_email_sync, to_email, otp)
-    logger.info("OTP email sent to %s", to_email)
+        return False
+    try:
+        await asyncio.to_thread(_send_email_sync, to_email, otp)
+        logger.info("OTP email sent to %s", to_email)
+        return True
+    except (socket.gaierror, TimeoutError, OSError, smtplib.SMTPException) as exc:
+        logger.error("Failed to send OTP email to %s: %s", to_email, exc)
+        return False
 
 
-async def _send_reset_otp_email(to_email: str, otp: str) -> None:
+async def _send_reset_otp_email(to_email: str, otp: str) -> bool:
     if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
         logger.warning("SMTP not configured — reset OTP for %s is: %s", to_email, otp)
-        raise RuntimeError("SMTP credentials not configured on server.")
-    await asyncio.to_thread(_send_reset_email_sync, to_email, otp)
-    logger.info("Password reset OTP sent to %s", to_email)
+        return False
+    try:
+        await asyncio.to_thread(_send_reset_email_sync, to_email, otp)
+        logger.info("Password reset OTP sent to %s", to_email)
+        return True
+    except (socket.gaierror, TimeoutError, OSError, smtplib.SMTPException) as exc:
+        logger.error("Failed to send reset OTP to %s: %s", to_email, exc)
+        return False
 
 
 async def _send_welcome_email(to_email: str, username: str) -> None:
@@ -201,7 +220,7 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
         email=payload.email,
         username=payload.username,
         password_hash=hash_password(payload.password),
-        tokens_left=settings.FREE_TOKENS,
+        tokens_left=FREE_TIER_TOKENS,
         plan="free",
         consent_given=True,
         email_verified=False,
@@ -214,13 +233,15 @@ async def register(payload: RegisterRequest, db: AsyncSession = Depends(get_db))
     await db.commit()
     await db.refresh(user)
 
-    try:
-        await _send_otp_email(payload.email, otp)
-    except Exception as exc:
-        logger.error("Failed to send OTP email: %s", exc)
+    otp_sent = await _send_otp_email(payload.email, otp)
+    delivery = "email" if otp_sent else "unavailable"
+    logger.info("New user registered: %s (id=%d) — OTP delivery=%s", user.email, user.id, delivery)
 
-    logger.info("New user registered: %s (id=%d) — OTP sent", user.email, user.id)
-    return OtpRequiredResponse(email=payload.email)
+    return OtpRequiredResponse(
+        email=payload.email,
+        otp_delivery=delivery,
+        debug_otp=otp if (not otp_sent and settings.EXPOSE_OTP_IN_RESPONSE) else None,
+    )
 
 
 # ─────────────────────────── send-otp (resend) ────────────────────────────────
@@ -241,12 +262,17 @@ async def send_otp(payload: SendOtpRequest, db: AsyncSession = Depends(get_db)):
     user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
     await db.commit()
 
-    try:
-        await _send_otp_email(payload.email, otp)
-    except Exception as exc:
-        logger.error("Failed to resend OTP: %s", exc)
+    otp_sent = await _send_otp_email(payload.email, otp)
+    if otp_sent:
+        return {"detail": "Verification code sent.", "otp_delivery": "email"}
 
-    return {"detail": "Verification code sent."}
+    response = {
+        "detail": "Verification code generated, but email delivery is unavailable right now.",
+        "otp_delivery": "unavailable",
+    }
+    if settings.EXPOSE_OTP_IN_RESPONSE:
+        response["debug_otp"] = otp
+    return response
 
 
 # ─────────────────────────── verify-otp ───────────────────────────────────────
@@ -307,9 +333,18 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @router.post("/google", response_model=TokenResponse)
 async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get_db)):
+    if not settings.GOOGLE_CLIENT_ID:
+        logger.warning("Google sign-in attempted but GOOGLE_CLIENT_ID is not configured")
+        raise HTTPException(status_code=503, detail="Google sign-in is not configured on server.")
+
     try:
         from google.oauth2 import id_token
         from google.auth.transport import requests as google_requests
+    except ModuleNotFoundError:
+        logger.error("Google auth dependency missing. Install 'google-auth' package.")
+        raise HTTPException(status_code=503, detail="Google sign-in is temporarily unavailable.")
+
+    try:
         idinfo = id_token.verify_oauth2_token(
             payload.credential,
             google_requests.Request(),
@@ -345,7 +380,7 @@ async def google_auth(payload: GoogleAuthRequest, db: AsyncSession = Depends(get
             email=google_email,
             password_hash="",          # Google-only account
             google_id=google_sub,
-            tokens_left=settings.FREE_TOKENS,
+            tokens_left=FREE_TIER_TOKENS,
             plan="free",
             consent_given=True,
             email_verified=True,
@@ -396,16 +431,21 @@ async def forgot_password(payload: ForgotPasswordRequest, db: AsyncSession = Dep
     user.otp_expires_at = datetime.now(timezone.utc) + timedelta(minutes=OTP_EXPIRE_MINUTES)
     await db.commit()
 
-    try:
-        await _send_reset_otp_email(payload.email, otp)
-    except Exception as exc:
-        logger.error("Failed to send reset OTP to %s: %s", payload.email, exc)
-        raise HTTPException(
-            status_code=500,
-            detail="Could not send reset email. Please try again in a few moments.",
-        )
+    otp_sent = await _send_reset_otp_email(payload.email, otp)
+    if otp_sent:
+        return {"detail": "Reset code sent to your email.", "otp_delivery": "email"}
 
-    return {"detail": "Reset code sent to your email."}
+    if settings.EXPOSE_OTP_IN_RESPONSE:
+        return {
+            "detail": "Email delivery unavailable. Use debug_otp for testing.",
+            "otp_delivery": "unavailable",
+            "debug_otp": otp,
+        }
+
+    raise HTTPException(
+        status_code=503,
+        detail="Reset email delivery is unavailable right now. Please try again later.",
+    )
 
 
 # ─────────────────────────── reset password ───────────────────────────────────
