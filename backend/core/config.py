@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""   # Gmail App Password
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = ""
     EXPOSE_OTP_IN_RESPONSE: bool = False
 
 

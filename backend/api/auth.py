@@ -6,6 +6,7 @@ import smtplib
 import asyncio
 import functools
 import socket
+import httpx
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -31,6 +32,7 @@ settings = get_settings()
 
 OTP_EXPIRE_MINUTES = 10
 FREE_TIER_TOKENS = 2
+RESEND_API_URL = "https://api.resend.com/emails"
 
 if settings.FREE_TOKENS != FREE_TIER_TOKENS:
     logger.warning(
@@ -47,6 +49,29 @@ def _generate_otp(length: int = 6) -> str:
     return "".join(secrets.choice(string.digits) for _ in range(length))
 
 
+def _otp_email_html(otp: str) -> str:
+        return f"""
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
+            <h2 style="color:#38bdf8;margin-bottom:8px;">PharmForge AI</h2>
+            <p style="color:#94a3b8;">Your one-time verification code:</p>
+            <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
+            <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. Do not share this code.</p>
+        </div>
+        """
+
+
+def _reset_email_html(otp: str) -> str:
+        return f"""
+        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
+            <h2 style="color:#f87171;margin-bottom:8px;">PharmForge AI — Password Reset</h2>
+            <p style="color:#94a3b8;">We received a request to reset the password for this account.</p>
+            <p style="color:#94a3b8;">Use the code below to reset your password:</p>
+            <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
+            <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. If you did not request a password reset, you can safely ignore this email.</p>
+        </div>
+        """
+
+
 def _send_email_sync(to_email: str, otp: str) -> None:
     """Synchronous SMTP send — called via asyncio.to_thread."""
     msg = MIMEMultipart("alternative")
@@ -54,15 +79,7 @@ def _send_email_sync(to_email: str, otp: str) -> None:
     msg["From"] = f"PharmForge AI <{settings.SMTP_USER}>"
     msg["To"] = to_email
 
-    html = f"""
-    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
-      <h2 style="color:#38bdf8;margin-bottom:8px;">PharmForge AI</h2>
-      <p style="color:#94a3b8;">Your one-time verification code:</p>
-      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
-      <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. Do not share this code.</p>
-    </div>
-    """
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(_otp_email_html(otp), "html"))
 
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
         smtp.ehlo()
@@ -78,16 +95,7 @@ def _send_reset_email_sync(to_email: str, otp: str) -> None:
     msg["From"] = f"PharmForge AI <{settings.SMTP_USER}>"
     msg["To"] = to_email
 
-    html = f"""
-    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:8px;">
-      <h2 style="color:#f87171;margin-bottom:8px;">PharmForge AI — Password Reset</h2>
-      <p style="color:#94a3b8;">We received a request to reset the password for this account.</p>
-      <p style="color:#94a3b8;">Use the code below to reset your password:</p>
-      <div style="font-size:36px;font-weight:bold;letter-spacing:8px;color:#ffffff;padding:16px 0;">{otp}</div>
-      <p style="color:#64748b;font-size:12px;">Expires in {OTP_EXPIRE_MINUTES} minutes. If you did not request a password reset, you can safely ignore this email.</p>
-    </div>
-    """
-    msg.attach(MIMEText(html, "html"))
+    msg.attach(MIMEText(_reset_email_html(otp), "html"))
 
     with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
         smtp.ehlo()
@@ -159,28 +167,89 @@ def _send_password_changed_email_sync(to_email: str) -> None:
 
 async def _send_otp_email(to_email: str, otp: str) -> bool:
     """Send OTP via SMTP in a thread to avoid blocking the event loop."""
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning("SMTP not configured — OTP for %s is: %s", to_email, otp)
-        return False
-    try:
-        await asyncio.to_thread(_send_email_sync, to_email, otp)
-        logger.info("OTP email sent to %s", to_email)
+    if settings.SMTP_USER and settings.SMTP_PASSWORD:
+        try:
+            await asyncio.to_thread(_send_email_sync, to_email, otp)
+            logger.info("OTP email sent to %s via SMTP", to_email)
+            return True
+        except (socket.gaierror, TimeoutError, OSError, smtplib.SMTPException) as exc:
+            logger.error("Failed to send OTP email to %s via SMTP: %s", to_email, exc)
+    else:
+        logger.warning("SMTP not configured — attempting Resend fallback for OTP to %s", to_email)
+
+    if await _send_email_via_resend(
+        to_email=to_email,
+        subject="Your PharmForge AI verification code",
+        html=_otp_email_html(otp),
+    ):
+        logger.info("OTP email sent to %s via Resend", to_email)
         return True
-    except (socket.gaierror, TimeoutError, OSError, smtplib.SMTPException) as exc:
-        logger.error("Failed to send OTP email to %s: %s", to_email, exc)
+
+    logger.error("OTP delivery failed for %s on all configured email providers", to_email)
+    if settings.EXPOSE_OTP_IN_RESPONSE:
+        logger.warning("Debug OTP fallback for %s: %s", to_email, otp)
+    return False
+
+
+async def _send_email_via_resend(to_email: str, subject: str, html: str) -> bool:
+    if not settings.RESEND_API_KEY:
+        return False
+
+    sender = settings.RESEND_FROM_EMAIL or settings.SMTP_USER
+    if not sender:
+        logger.error("RESEND_FROM_EMAIL is required when using Resend email delivery")
+        return False
+
+    payload = {
+        "from": f"PharmForge AI <{sender}>",
+        "to": [to_email],
+        "subject": subject,
+        "html": html,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.post(RESEND_API_URL, headers=headers, json=payload)
+        if response.status_code >= 400:
+            logger.error(
+                "Resend API failed for %s: status=%s body=%s",
+                to_email,
+                response.status_code,
+                response.text[:500],
+            )
+            return False
+        return True
+    except Exception as exc:
+        logger.error("Resend API error for %s: %s", to_email, exc)
         return False
 
 
 async def _send_reset_otp_email(to_email: str, otp: str) -> bool:
-    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
-        logger.warning("SMTP not configured — reset OTP for %s is: %s", to_email, otp)
-        return False
-    try:
-        await asyncio.to_thread(_send_reset_email_sync, to_email, otp)
-        logger.info("Password reset OTP sent to %s", to_email)
+    if settings.SMTP_USER and settings.SMTP_PASSWORD:
+        try:
+            await asyncio.to_thread(_send_reset_email_sync, to_email, otp)
+            logger.info("Password reset OTP sent to %s via SMTP", to_email)
+            return True
+        except (socket.gaierror, TimeoutError, OSError, smtplib.SMTPException) as exc:
+            logger.error("Failed to send reset OTP to %s via SMTP: %s", to_email, exc)
+    else:
+        logger.warning("SMTP not configured — attempting Resend fallback for reset OTP to %s", to_email)
+
+    if await _send_email_via_resend(
+        to_email=to_email,
+        subject="Reset your PharmForge AI password",
+        html=_reset_email_html(otp),
+    ):
+        logger.info("Password reset OTP sent to %s via Resend", to_email)
         return True
-    except (socket.gaierror, TimeoutError, OSError, smtplib.SMTPException) as exc:
-        logger.error("Failed to send reset OTP to %s: %s", to_email, exc)
+
+    logger.error("Reset OTP delivery failed for %s on all configured email providers", to_email)
+    if settings.EXPOSE_OTP_IN_RESPONSE:
+        logger.warning("Debug reset OTP fallback for %s: %s", to_email, otp)
         return False
 
 
@@ -318,9 +387,25 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
     if not user.email_verified:
+        now = datetime.now(timezone.utc)
+        otp = user.otp_code
+        if not otp or not user.otp_expires_at or user.otp_expires_at < now:
+            otp = _generate_otp()
+            user.otp_code = otp
+            user.otp_expires_at = now + timedelta(minutes=OTP_EXPIRE_MINUTES)
+            await db.commit()
+
+        otp_sent = await _send_otp_email(user.email, otp)
+        detail = {
+            "message": "Email not verified. Please verify your email first.",
+            "otp_delivery": "email" if otp_sent else "unavailable",
+        }
+        if not otp_sent and settings.EXPOSE_OTP_IN_RESPONSE:
+            detail["debug_otp"] = otp
+
         raise HTTPException(
             status_code=403,
-            detail="Email not verified. Please verify your email first.",
+            detail=detail,
             headers={"X-Requires-Verification": payload.email},
         )
 

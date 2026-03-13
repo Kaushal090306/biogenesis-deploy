@@ -203,7 +203,13 @@ export default function AuthPage({ mode }) {
             setOtpEmail(email)
             setView('verify-otp')
             setResendCooldown(0)
-            toast('Please verify your email first.', { icon: 'EMAIL' })
+            const detail = err.response?.data?.detail
+            if (!showOtpDeliveryToast(detail, 'verification')) {
+              const fallback = typeof detail === 'string'
+                ? detail
+                : detail?.message || 'Please verify your email first.'
+              toast(fallback, { icon: 'EMAIL' })
+            }
           } else {
             throw err
           }

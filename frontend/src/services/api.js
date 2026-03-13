@@ -8,7 +8,13 @@ const api = axios.create({
 // Attach JWT on every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('bg_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  if (token) {
+    // Keep app JWT available in dedicated headers because private HF proxy may
+    // reserve Authorization for Space access.
+    config.headers.Authorization = `Bearer ${token}`
+    config.headers['X-User-Authorization'] = `Bearer ${token}`
+    config.headers['X-User-Token'] = token
+  }
   return config
 })
 
