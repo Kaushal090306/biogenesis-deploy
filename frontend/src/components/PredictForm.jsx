@@ -11,7 +11,7 @@ const SLIDER_CONFIG = [
   { key: 'temperature', label: 'Generation Temperature', min: 0.1, max: 2.0, step: 0.05, default: 0.8, desc: 'Controls diversity. Higher = more creative molecules.' },
   { key: 'min_smiles_len', label: 'Min SMILES Length', min: 10, max: 100, step: 1, default: 40, desc: 'Minimum molecule size.' },
   { key: 'max_smiles_len', label: 'Max SMILES Length', min: 50, max: 200, step: 1, default: 100, desc: 'Maximum molecule size.' },
-  { key: 'num_leads', label: 'Number of Leads', min: 10, max: 300, step: 10, default: 10, desc: 'How many drug candidates to generate. Must be a multiple of 10 (1 token = 10 leads).' },
+  { key: 'num_leads', label: 'Number of Leads', min: 1, max: 300, step: 1, default: 10, desc: 'How many drug candidates to generate. Up to 10 leads cost 1 token.' },
 ]
 
 export default function PredictForm({ onResult, onTokensExhausted, userTokens, userPlan = 'free', onClearResult, onUpgrade }) {
@@ -21,6 +21,30 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
   )
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
+  const [activeTooltip, setActiveTooltip] = useState(null)
+
+  useEffect(() => {
+    if (!activeTooltip) return
+
+    function handlePointerDown(event) {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (!target.closest('[data-info-tip="true"]')) {
+        setActiveTooltip(null)
+      }
+    }
+
+    function handleKeydown(event) {
+      if (event.key === 'Escape') setActiveTooltip(null)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeydown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeydown)
+    }
+  }, [activeTooltip])
 
   function setParam(key, val) {
     setParams((p) => ({ ...p, [key]: parseFloat(val) }))
@@ -157,6 +181,8 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
                 config={s}
                 value={params[s.key]}
                 onChange={(v) => setParam(s.key, v)}
+                activeTooltip={activeTooltip}
+                setActiveTooltip={setActiveTooltip}
               />
             )
           })}
@@ -172,6 +198,8 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
                 config={s}
                 value={params[s.key]}
                 onChange={(v) => setParam(s.key, v)}
+                activeTooltip={activeTooltip}
+                setActiveTooltip={setActiveTooltip}
               />
             )
           })}
@@ -185,11 +213,13 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
               config={s}
               value={params.num_leads}
               onChange={(v) => setParam('num_leads', v)}
+              activeTooltip={activeTooltip}
+              setActiveTooltip={setActiveTooltip}
             />
           )
         })()}
         <p className="text-xs text-slate-600 -mt-2">
-          1 token = 10 leads · min 10 leads per run
+          1 token covers up to 10 leads · any lead count is allowed
         </p>
 
         {/* Row 5: Submit */}
@@ -234,19 +264,29 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
   )
 }
 
-function SliderField({ config, value, onChange, full }) {
+function SliderField({ config, value, onChange, full, activeTooltip, setActiveTooltip }) {
   return (
     <div className={full ? 'col-span-2' : ''}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-1.5">
           <label className="label-text mb-0 text-xs">{config.label}</label>
-          <Tooltip>
+          <Tooltip
+            open={activeTooltip === config.key}
+            onOpenChange={(open) => setActiveTooltip(open ? config.key : null)}
+          >
             <TooltipTrigger asChild>
-              <button type="button" className="cursor-help focus:outline-none">
+              <button
+                type="button"
+                className="cursor-help focus:outline-none"
+                data-info-tip="true"
+                onClick={() => setActiveTooltip(activeTooltip === config.key ? null : config.key)}
+              >
                 <Info size={11} className="text-slate-600 hover:text-slate-400 transition-colors" />
               </button>
             </TooltipTrigger>
-            <TooltipContent variant="light" side="top">{config.desc}</TooltipContent>
+            <TooltipContent variant="light" side="top" data-info-tip="true">
+              {config.desc}
+            </TooltipContent>
           </Tooltip>
         </div>
         <span className="text-xs font-mono text-brand-400 bg-brand-900/30 px-2 py-0.5 rounded">
@@ -270,7 +310,7 @@ function SliderField({ config, value, onChange, full }) {
   )
 }
 
-function CounterField({ config, value, onChange }) {
+function CounterField({ config, value, onChange, activeTooltip, setActiveTooltip }) {
   const [inputVal, setInputVal] = useState(String(Math.round(value)))
 
   useEffect(() => {
@@ -301,13 +341,23 @@ function CounterField({ config, value, onChange }) {
     <div>
       <div className="flex items-center gap-1.5 mb-2">
         <label className="label-text mb-0 text-xs">{config.label}</label>
-        <Tooltip>
+        <Tooltip
+          open={activeTooltip === config.key}
+          onOpenChange={(open) => setActiveTooltip(open ? config.key : null)}
+        >
           <TooltipTrigger asChild>
-            <button type="button" className="cursor-help focus:outline-none">
+            <button
+              type="button"
+              className="cursor-help focus:outline-none"
+              data-info-tip="true"
+              onClick={() => setActiveTooltip(activeTooltip === config.key ? null : config.key)}
+            >
               <Info size={11} className="text-slate-600 hover:text-slate-400 transition-colors" />
             </button>
           </TooltipTrigger>
-          <TooltipContent variant="light" side="top">{config.desc}</TooltipContent>
+          <TooltipContent variant="light" side="top" data-info-tip="true">
+            {config.desc}
+          </TooltipContent>
         </Tooltip>
       </div>
       <div className="flex items-center gap-3">

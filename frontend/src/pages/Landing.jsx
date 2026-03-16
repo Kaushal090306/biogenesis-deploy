@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -53,6 +53,34 @@ const FEATURES = [
     color: 'from-brand-600/20 to-brand-800/10',
     border: 'border-brand-700/30',
     tag: 'RDKit Ready',
+  },
+]
+
+const COMPARISON_ROWS = [
+  {
+    feature: 'Search Space',
+    standard: 'Limited to static vendor libraries.',
+    pharmforge: 'Infinite. De novo generation of novel chemistry.',
+  },
+  {
+    feature: 'Process Control',
+    standard: 'Passive (Filtering only).',
+    pharmforge: 'Active. Targeted engineering via user parameters.',
+  },
+  {
+    feature: 'Lead Quality',
+    standard: 'Manual multi-step analysis.',
+    pharmforge: 'Automated. Integrated ADMET & Toxicity audit.',
+  },
+  {
+    feature: 'Time-to-Dock',
+    standard: 'Days/Weeks (Library prep).',
+    pharmforge: 'Minutes. Direct output of dock-ready candidates.',
+  },
+  {
+    feature: 'Chemical Innovation',
+    standard: 'High risk of existing patents.',
+    pharmforge: 'High probability of novel, patentable hits.',
   },
 ]
 
@@ -204,17 +232,72 @@ const fadeUp = {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Landing() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [loadingPlan, setLoadingPlan] = useState(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  async function handlePlanCheckout(planKey) {
+    if (!user) {
+      navigate('/register')
+      return
+    }
+
+    setLoadingPlan(planKey)
+    try {
+      const res = await createCheckout(planKey)
+      const { order_id, key_id, amount, currency } = res.data
+
+      if (!window.Razorpay) {
+        toast.error('Payment gateway is still loading. Please try again in a moment.')
+        setLoadingPlan(null)
+        return
+      }
+
+      const planName = PLANS.find((p) => p.key === planKey)?.name ?? planKey
+      const rzp = new window.Razorpay({
+        key: key_id,
+        amount,
+        currency,
+        name: 'PharmForge AI',
+        description: planName,
+        image: '/dna.svg',
+        order_id,
+        handler: async function (response) {
+          try {
+            const verifyRes = await verifyCheckout(
+              response.razorpay_payment_id,
+              response.razorpay_order_id,
+              response.razorpay_signature,
+              planKey,
+            )
+            updateUser(verifyRes.data)
+            toast.success(`🎉 Payment successful! ${verifyRes.data.tokens_left} tokens available.`)
+          } catch {
+            toast.error('Payment verified but upgrade failed. Contact support.')
+          } finally {
+            setLoadingPlan(null)
+          }
+        },
+        prefill: {},
+        theme: { color: '#14b8a6' },
+        modal: {
+          ondismiss: () => setLoadingPlan(null),
+        },
+      })
+      rzp.open()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Failed to start checkout. Please try again.')
+      setLoadingPlan(null)
+    }
+  }
 
   return (
     <WavyBackground
@@ -564,10 +647,10 @@ export default function Landing() {
       
 
       {/* ── How it works ── */}
-      <section id="how-it-works" className="py-16 sm:py-24 px-4 sm:px-6 border-t border-white/[0.04]">
+      <section id="how-it-works" className="py-12 sm:py-24 px-4 sm:px-6 border-t border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
           <motion.div
-            className="text-center mb-16"
+            className="text-center mb-10 sm:mb-16"
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.5 }}
@@ -578,19 +661,19 @@ export default function Landing() {
               Workflow
               <span className="w-6 h-px bg-brand-600" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">How PharmForge AI works</h2>
-            <p className="text-slate-300 max-w-xl mx-auto text-base">Three steps from protein target to ranked drug candidates</p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3">How PharmForge AI works</h2>
+            <p className="text-slate-300 max-w-xl mx-auto text-sm sm:text-base">Three steps from protein target to ranked drug candidates</p>
           </motion.div>
           {/* First three step cards removed to simplify workflow UI */}
-          <div className="mt-10 max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="mt-8 sm:mt-10 max-w-6xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {HOW_DETAILS.map((d, i) => (
-                <div key={i} className="glass-morph p-5 h-full">
-                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-white/[0.03] mb-3">
-                    <d.icon size={18} className="text-brand-400" />
+                <div key={i} className="glass-morph p-4 sm:p-5 h-full">
+                  <div className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/[0.03] mb-2.5 sm:mb-3">
+                    <d.icon size={16} className="text-brand-400" />
                   </div>
-                  <h4 className="text-white font-semibold mb-2">{d.title}</h4>
-                  <p className="text-slate-400 text-sm leading-relaxed">{d.desc}</p>
+                  <h4 className="text-white font-semibold text-sm sm:text-base mb-1.5 sm:mb-2">{d.title}</h4>
+                  <p className="text-slate-400 text-xs sm:text-sm leading-relaxed">{d.desc}</p>
                 </div>
               ))}
             </div>
@@ -601,9 +684,9 @@ export default function Landing() {
 
 
       {/* ── Features ── */}
-      <section id="features" className="py-16 sm:py-24 border-b border-white/[0.04]">
+      <section id="features" className="py-12 sm:py-24 border-b border-white/[0.04]">
         {/* Heading — keep centred inside normal max-width */}
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center mb-10 sm:mb-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 text-center mb-8 sm:mb-16">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
@@ -614,31 +697,31 @@ export default function Landing() {
             Features
             <span className="w-6 h-px bg-brand-600" />
           </motion.div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-3">Everything you need</h2>
-          <p className="text-slate-400 max-w-xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3">Everything you need</h2>
+          <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base">
             A complete platform for in-silico drug lead generation   secure, fast, and reproducible.
           </p>
         </div>
 
         {/* Full-viewport rail — no max-width, no horizontal padding */}
         <div className="overflow-hidden w-screen" style={{ marginLeft: 'calc(50% - 50vw)' }}>
-          <div className="flex gap-3 sm:gap-4 py-3 rail-track" style={{ width: 'max-content' }}>
+          <div className="flex gap-2 sm:gap-4 py-2 sm:py-3 rail-track" style={{ width: 'max-content' }}>
             {[...FEATURES, ...FEATURES].map((f, i) => (
               <div
                 key={i}
-                style={{ width: 'min(85vw, 340px)', minHeight: '240px', flexShrink: 0 }}
-                className={`glass-morph p-8 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col`}
+                style={{ width: 'min(82vw, 320px)', minHeight: '212px', flexShrink: 0 }}
+                className={`glass-morph p-5 sm:p-8 border ${f.border} bg-gradient-to-br ${f.color} group hover:scale-[1.02] hover:shadow-lg transition-all duration-300 flex flex-col`}
               >
-                <div className="flex items-start justify-between mb-5">
-                  <div className="p-3 rounded-xl bg-white/[0.05] group-hover:bg-white/[0.09] transition-colors">
-                    <f.icon size={26} className="text-brand-400" />
+                <div className="flex items-start justify-between mb-3.5 sm:mb-5">
+                  <div className="p-2.5 sm:p-3 rounded-xl bg-white/[0.05] group-hover:bg-white/[0.09] transition-colors">
+                    <f.icon size={22} className="text-brand-400" />
                   </div>
-                  <span className="text-[10px] font-mono text-slate-500 bg-white/[0.04] px-2 py-1 rounded border border-white/[0.06]">
+                  <span className="text-[9px] sm:text-[10px] font-mono text-slate-500 bg-white/[0.04] px-2 py-1 rounded border border-white/[0.06]">
                     {f.tag}
                   </span>
                 </div>
-                <h3 className="font-semibold text-white text-lg mb-3">{f.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed flex-1">{f.desc}</p>
+                <h3 className="font-semibold text-white text-base sm:text-lg mb-2.5 sm:mb-3">{f.title}</h3>
+                <p className="text-slate-400 text-xs sm:text-sm leading-relaxed flex-1">{f.desc}</p>
               </div>
             ))}
           </div>
@@ -646,21 +729,38 @@ export default function Landing() {
       </section>
 
       {/* ── Comparison: Standard VS PharmForge (table) ── */}
-      <section id="comparison" className="py-16 sm:py-20 px-4 sm:px-6 border-b border-white/[0.04]">
+      <section id="comparison" className="py-12 sm:py-20 px-4 sm:px-6 border-b border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
+          <div className="text-center mb-7 sm:mb-8">
             <div className="inline-flex items-center gap-2 text-brand-400 text-xs font-medium uppercase tracking-widest mb-4">
               <span className="w-6 h-px bg-brand-600" />
               Compare
               <span className="w-6 h-px bg-brand-600" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">PharmForge AI Advantage</h2>
-            <p className="text-slate-400 max-w-xl mx-auto">How PharmForge AI compares to standard virtual screening workflows</p>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3">PharmForge AI Advantage</h2>
+            <p className="text-slate-400 max-w-xl mx-auto text-sm sm:text-base">How PharmForge AI compares to standard virtual screening workflows</p>
           </div>
 
-          <div className="glass-morph p-0 overflow-hidden">
+          <div className="sm:hidden space-y-3">
+            {COMPARISON_ROWS.map((row) => (
+              <div key={row.feature} className="glass-morph p-4">
+                <h3 className="text-sm font-semibold text-white mb-3">{row.feature}</h3>
+                <div className="space-y-2.5">
+                  <div className="rounded-lg border border-white/[0.06] bg-surface-800/35 p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">Standard</p>
+                    <p className="text-sm text-slate-300 leading-relaxed">{row.standard}</p>
+                  </div>
+                  <div className="rounded-lg border border-brand-700/35 bg-brand-900/15 p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-brand-400 mb-1">PharmForge AI</p>
+                    <p className="text-sm text-slate-200 leading-relaxed">{row.pharmforge}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden sm:block glass-morph p-0 overflow-hidden">
             <div className="grid grid-cols-3 gap-0 divide-x divide-white/[0.04]">
-              {/* Header row */}
               <div className="col-span-3 bg-surface-800/60 p-4">
                 <div className="grid grid-cols-3 items-center gap-4">
                   <div className="text-sm text-slate-400 font-medium">Feature</div>
@@ -669,36 +769,19 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Rows */}
-              <div className="p-5 border-t border-white/[0.03]">
-                <div className="text-sm text-slate-300 font-medium">Search Space</div>
-              </div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Limited to static vendor libraries.</div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Infinite. De novo generation of novel chemistry.</div>
-
-              <div className="p-5 border-t border-white/[0.03]">
-                <div className="text-sm text-slate-300 font-medium">Process Control</div>
-              </div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Passive (Filtering only).</div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Active. Targeted engineering via user parameters.</div>
-
-              <div className="p-5 border-t border-white/[0.03]">
-                <div className="text-sm text-slate-300 font-medium">Lead Quality</div>
-              </div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Manual multi-step analysis.</div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Automated. Integrated ADMET &amp; Toxicity audit.</div>
-
-              <div className="p-5 border-t border-white/[0.03]">
-                <div className="text-sm text-slate-300 font-medium">Time-to-Dock</div>
-              </div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Days/Weeks (Library prep).</div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">Minutes. Direct output of dock-ready candidates.</div>
-
-              <div className="p-5 border-t border-white/[0.03]">
-                <div className="text-sm text-slate-300 font-medium">Chemical Innovation</div>
-              </div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">High risk of existing patents.</div>
-              <div className="p-5 border-t border-white/[0.03] text-slate-300">High probability of novel, patentable hits.</div>
+              {COMPARISON_ROWS.map((row) => (
+                <Fragment key={row.feature}>
+                  <div className="p-5 border-t border-white/[0.03]">
+                    <div className="text-sm text-slate-300 font-medium">{row.feature}</div>
+                  </div>
+                  <div className="p-5 border-t border-white/[0.03] text-slate-300">
+                    {row.standard}
+                  </div>
+                  <div className="p-5 border-t border-white/[0.03] text-slate-300">
+                    {row.pharmforge}
+                  </div>
+                </Fragment>
+              ))}
             </div>
           </div>
         </div>
@@ -707,9 +790,9 @@ export default function Landing() {
       {/* Tech stack and security sections removed per request */}
 
       {/* ── Testimonials ── */}
-      <section className="py-16 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
+      <section className="py-12 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
+          <div className="text-center mb-10 sm:mb-16">
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -757,9 +840,9 @@ export default function Landing() {
       </section>
 
       {/* ── Pricing ── */}
-      <section id="pricing" className="py-16 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
+      <section id="pricing" className="py-12 sm:py-24 px-4 sm:px-6 border-b border-white/[0.04]">
         <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-14">
+          <div className="text-center mb-10 sm:mb-14">
             <motion.div
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
@@ -812,16 +895,11 @@ export default function Landing() {
                   ))}
                 </ul>
                 <button
-                  onClick={() => {
-                    if (!user) {
-                      navigate('/register')
-                    } else {
-                      setShowUpgradeModal(true)
-                    }
-                  }}
-                  className={plan.highlighted ? 'btn-primary text-center text-sm w-full' : 'btn-outline text-center text-sm w-full'}
+                  onClick={() => handlePlanCheckout(plan.key)}
+                  disabled={loadingPlan !== null}
+                  className={`${plan.highlighted ? 'btn-primary' : 'btn-outline'} text-center text-sm w-full disabled:opacity-60`}
                 >
-                  {plan.cta}
+                  {loadingPlan === plan.key ? 'Starting...' : plan.cta}
                 </button>
               </motion.div>
             ))}
@@ -862,11 +940,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Upgrade Modal (only show when user is logged in) */}
-      {showUpgradeModal && user && (
-        <UpgradeModalComponent open={showUpgradeModal} onClose={() => setShowUpgradeModal(false)} />
-      )}
-
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.04] py-10 sm:py-12 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
@@ -875,7 +948,7 @@ export default function Landing() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-2xl">🧬</span>
                 <span className="font-bold text-lg">
-                  <span className="text-gradient">PharmForge AI</span>
+                  <span className="text-gradient">PharmForge</span>
                   <span className="text-slate-400 font-normal"> AI</span>
                 </span>
               </div>
@@ -913,93 +986,5 @@ export default function Landing() {
       </footer>
 
     </WavyBackground>
-  )
-}
-
-// Inline upgrade modal component for Landing page
-function UpgradeModalComponent({ open, onClose }) {
-  const { updateUser } = useAuth()
-  const [loading, setLoading] = useState(null)
-
-  async function handleUpgrade(planId) {
-    setLoading(planId)
-    try {
-      const res = await createCheckout(planId)
-      const { order_id, key_id, amount, currency } = res.data
-
-      const rzp = new window.Razorpay({
-        key: key_id,
-        amount,
-        currency,
-        name: 'PharmForge AI',
-        description: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-        image: '/dna.svg',
-        order_id,
-        handler: async function (response) {
-          try {
-            const verifyRes = await verifyCheckout(
-              response.razorpay_payment_id,
-              response.razorpay_order_id,
-              response.razorpay_signature,
-              planId,
-            )
-            updateUser(verifyRes.data)
-            toast.success(`🎉 Upgraded! ${verifyRes.data.tokens_left} tokens added.`)
-            onClose()
-          } catch {
-            toast.error('Payment verified but upgrade failed. Contact support.')
-          }
-        },
-        prefill: {},
-        theme: { color: '#14b8a6' },
-        modal: {
-          ondismiss: () => setLoading(null),
-        },
-      })
-      rzp.open()
-    } catch (err) {
-      toast.error(err.response?.data?.detail || 'Failed to start checkout.')
-      setLoading(null)
-    }
-  }
-
-  if (!open) return null
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-      <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }}
-        className="relative glass-card border border-white/[0.08] w-full max-w-sm p-7 rounded-2xl"
-      >
-        <h2 className="text-2xl font-bold mb-6">Choose Your Pack</h2>
-        <div className="space-y-4">
-          {PLANS.map((plan) => (
-            <div key={plan.key} className="p-4 border border-white/[0.1] rounded-lg hover:bg-white/[0.05] transition-colors">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-semibold text-white">{plan.name}</h3>
-                  <p className="text-sm text-slate-400">₹{plan.priceINR.toLocaleString('en-IN')} one-time</p>
-                </div>
-                <button
-                  onClick={() => handleUpgrade(plan.key)}
-                  disabled={loading === plan.key}
-                  className="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 rounded-lg text-sm font-medium text-white disabled:opacity-50 transition-colors"
-                >
-                  {loading === plan.key ? '...' : 'Buy'}
-                </button>
-              </div>
-              <p className="text-xs text-slate-500">{plan.runs}</p>
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={onClose}
-          className="mt-6 w-full py-2 text-slate-400 hover:text-white text-sm font-medium transition-colors"
-        >
-          Cancel
-        </button>
-      </motion.div>
-    </div>
   )
 }

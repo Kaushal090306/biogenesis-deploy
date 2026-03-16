@@ -66,8 +66,8 @@ export default function UpgradeModal({ open, onClose }) {
   const { isDark } = useTheme()
 
   const modalShellClass = isDark
-    ? 'relative glass-card border border-white/[0.08] w-full max-w-4xl p-8'
-    : 'relative w-full max-w-4xl p-8 rounded-2xl bg-white border border-slate-200 shadow-2xl shadow-slate-300/40'
+    ? 'relative glass-card border border-white/[0.08] w-full max-w-4xl p-5 sm:p-8'
+    : 'relative w-full max-w-4xl p-5 sm:p-8 rounded-2xl bg-white border border-slate-200 shadow-2xl shadow-slate-300/40'
 
   const titleClass = isDark ? 'text-2xl font-bold text-white mb-2' : 'text-2xl font-bold text-slate-900 mb-2'
   const subtitleClass = isDark ? 'text-slate-400 text-sm' : 'text-slate-600 text-sm'
@@ -117,7 +117,7 @@ export default function UpgradeModal({ open, onClose }) {
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -127,14 +127,15 @@ export default function UpgradeModal({ open, onClose }) {
             className={`fixed inset-0 backdrop-blur-sm ${isDark ? 'bg-black/70' : 'bg-slate-900/45'}`}
           />
 
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.92, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: 20 }}
-            transition={{ duration: 0.25, ease: 'easeOut' }}
-            className={modalShellClass}
-          >
+          <div className="relative min-h-full flex items-start sm:items-center justify-center px-4 pt-16 pb-6 sm:py-6">
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 20 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className={`${modalShellClass} max-h-[calc(100dvh-2.5rem)] overflow-y-auto`}
+            >
             <button
               onClick={onClose}
               className={`absolute top-4 right-4 transition-colors z-10 ${isDark ? 'text-slate-500 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}
@@ -213,7 +214,8 @@ export default function UpgradeModal({ open, onClose }) {
             <p className={`text-center text-xs mt-6 ${isDark ? 'text-slate-600' : 'text-slate-500'}`}>
               Payments powered by Razorpay · Secure · All major cards &amp; UPI accepted
             </p>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
       )}
     </AnimatePresence>
