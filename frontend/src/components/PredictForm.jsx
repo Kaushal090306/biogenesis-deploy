@@ -148,7 +148,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         </div>
 
         {/* Row 2: Min QED Score + Generation Temperature */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {['min_qed', 'temperature'].map((key) => {
             const s = SLIDER_CONFIG.find((c) => c.key === key)
             return (
@@ -163,7 +163,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         </div>
 
         {/* Row 3: Min SMILES Length + Max SMILES Length */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {['min_smiles_len', 'max_smiles_len'].map((key) => {
             const s = SLIDER_CONFIG.find((c) => c.key === key)
             return (

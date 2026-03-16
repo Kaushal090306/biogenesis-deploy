@@ -388,6 +388,7 @@ export default function Navbar({ onUpgrade, onHistory }) {
   const { user, logout, updateUser } = useAuth()
   const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
+  const tokensLeft = Math.max(0, user?.tokens_left ?? 0)
   const [menuOpen, setMenuOpen] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showChangePass, setShowChangePass] = useState(false)
@@ -413,16 +414,16 @@ export default function Navbar({ onUpgrade, onHistory }) {
       <nav className="fixed top-0 inset-x-0 z-50 bg-surface-900/90 backdrop-blur-xl border-b border-white/[0.05]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2 sm:gap-2.5">
             <span className="text-2xl">🧬</span>
-            <span className="font-bold text-base tracking-tight">
+            <span className="font-bold text-sm sm:text-base tracking-tight">
               <span className="text-gradient">PharmForge</span>
-              <span className="text-slate-500 font-normal text-sm"> AI</span>
+              <span className="text-slate-500 font-normal text-sm hidden sm:inline"> AI</span>
             </span>
           </Link>
 
           {/* Right */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Theme toggle */}
             <button
               type="button"
@@ -442,26 +443,30 @@ export default function Navbar({ onUpgrade, onHistory }) {
               <>
                 <button
                   onClick={onUpgrade}
-                  className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-brand-400 hover:text-brand-300
-                             bg-brand-900/30 border border-brand-800/40 hover:border-brand-700/60
-                             px-3 py-1.5 rounded-lg transition-all duration-200"
+                  className={`flex items-center gap-1.5 text-[11px] sm:text-xs font-medium whitespace-nowrap px-2.5 sm:px-3 py-1.5 rounded-lg transition-all duration-200 ${
+                    tokensLeft > 0
+                      ? 'text-brand-300 hover:text-brand-200 bg-brand-900/20 border border-brand-800/35 hover:border-brand-700/60'
+                      : 'text-amber-300 hover:text-amber-200 bg-amber-900/20 border border-amber-700/35 hover:border-amber-600/60'
+                  }`}
+                  title={tokensLeft > 0 ? `Tokens: ${tokensLeft}` : 'Upgrade Plan'}
                 >
-                  <Zap size={12} />
-                  Upgrade
+                  <Zap size={12} className={tokensLeft > 0 ? 'text-brand-400' : 'text-amber-400'} />
+                  {tokensLeft > 0 ? (
+                    <>
+                      <span className="font-mono font-semibold">{tokensLeft}</span>
+                      <span className="hidden sm:inline">token{tokensLeft === 1 ? '' : 's'}</span>
+                    </>
+                  ) : (
+                    <span className="font-semibold">Upgrade</span>
+                  )}
                 </button>
-
-                {/* Token counter */}
-                <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-brand-300 bg-brand-900/20 border border-brand-800/30 px-2.5 py-1.5 rounded-lg">
-                  <Zap size={11} className="text-brand-400" />
-                  <span>{user.tokens_left}</span>
-                </div>
 
                 {/* Profile dropdown trigger */}
                 <div className="relative" ref={menuRef}>
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
                     className="flex items-center gap-2 text-xs text-slate-300 bg-surface-700/50 hover:bg-surface-600/60
-                               border border-white/[0.05] px-3 py-1.5 rounded-lg transition-all duration-200"
+                               border border-white/[0.05] px-2 sm:px-3 py-1.5 rounded-lg transition-all duration-200"
                   >
                     <div className="w-5 h-5 rounded-full bg-gradient-to-br from-brand-600 to-brand-900 flex items-center justify-center text-[10px] font-bold text-white">
                       {(user.username?.[0] || user.email?.[0])?.toUpperCase()}
