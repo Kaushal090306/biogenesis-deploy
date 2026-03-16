@@ -76,7 +76,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
 
     setLoading(true)
     setProgress('Encoding protein with ESM2…')
-    const toastId = toast.loading('Running inference pipeline… (~30–90s)')
+    const toastId = toast.loading('Running inference pipeline… complex runs can take a few minutes.')
 
     try {
       // Simulate progress messages
@@ -116,6 +116,8 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         onUpgrade?.()
       } else if (err.response?.status === 429) {
         toast.error('Rate limit reached. Please wait a minute.')
+      } else if (err.response?.status === 408) {
+        toast.error(err.response?.data?.detail || 'Prediction is still running. Please check history in a moment.')
       } else if (err.response?.status === 422) {
         // Pydantic validation error — detail is [{loc, msg, type, ...}]
         const detail = err.response?.data?.detail

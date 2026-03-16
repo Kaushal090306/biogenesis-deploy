@@ -30,9 +30,9 @@ export const WavyBackground = ({
   const waveColors = colors ?? [
     "#14b8a6",
     "#0d9488",
-    "#2dd4bf",
-    "#5eead4",
-    "#0f766e",
+    "#8b5cf6",
+    "#a855f7",
+    "#c084fc",
   ];
 
   let animationId;

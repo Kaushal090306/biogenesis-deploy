@@ -5,6 +5,27 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+const PREDICTION_SUBMIT_TIMEOUT_MS = 30_000
+const PREDICTION_STATUS_TIMEOUT_MS = 30_000
+const PREDICTION_POLL_INTERVAL_MS = 3_000
+const PREDICTION_MAX_WAIT_MS = 60 * 60 * 1000
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function isTransientPollError(err) {
+  const status = err?.response?.status
+  return status === 502 || status === 503 || status === 504 || status === 524 || err?.code === 'ECONNABORTED'
+}
+
+function createApiLikeError(status, detail) {
+  const error = new Error(detail)
+  error.response = {
+    status,
+    data: { detail },
+  }
+  return error
+}
+
 // Attach JWT on every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('bg_token')
@@ -48,8 +69,51 @@ export const googleAuth = (credential) =>
   api.post('/auth/google', { credential })
 
 // ── Prediction ──
-export const runPrediction = (sequence, params) =>
-  api.post('/predict', { sequence, params }, { timeout: 600_000 }) // 10 min timeout for heavy inference
+export const runPrediction = async (sequence, params) => {
+  const submitRes = await api.post(
+    '/predict/submit',
+    { sequence, params },
+    { timeout: PREDICTION_SUBMIT_TIMEOUT_MS }
+  )
+
+  const predictionId = submitRes.data?.prediction_id
+  if (!predictionId) {
+    throw createApiLikeError(500, 'Prediction submission failed. Missing prediction ID.')
+  }
+
+  const startedAt = Date.now()
+  while (Date.now() - startedAt < PREDICTION_MAX_WAIT_MS) {
+    try {
+      const statusRes = await api.get(
+        `/predict/${predictionId}/status`,
+        { timeout: PREDICTION_STATUS_TIMEOUT_MS }
+      )
+      const status = statusRes.data?.status
+
+      if (status === 'done' && statusRes.data?.result) {
+        return { data: statusRes.data.result }
+      }
+
+      if (status === 'failed') {
+        throw createApiLikeError(
+          500,
+          statusRes.data?.detail || 'Prediction failed. Please retry with adjusted parameters.'
+        )
+      }
+    } catch (err) {
+      if (!isTransientPollError(err)) {
+        throw err
+      }
+    }
+
+    await sleep(PREDICTION_POLL_INTERVAL_MS)
+  }
+
+  throw createApiLikeError(
+    408,
+    'Prediction is still running. Please wait and check history in a moment.'
+  )
+}
 
 // ── Dashboard ──
 export const getProfile = () => api.get('/dashboard/me')

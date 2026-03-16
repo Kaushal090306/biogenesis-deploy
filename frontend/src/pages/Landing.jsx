@@ -422,7 +422,7 @@ export default function Landing() {
   return (
     <WavyBackground
       backgroundFill="#0a0f1e"
-      colors={['#14b8a6', '#0d9488', '#2dd4bf', '#0f766e', '#5eead4']}
+      colors={['#14b8a6', '#0d9488', '#8b5cf6', '#a855f7', '#c084fc']}
       blur={14}
       speed="slow"
       waveOpacity={0.3}
@@ -459,7 +459,7 @@ export default function Landing() {
 
           {/* Desktop nav links — centered pill style */}
           <div className="hidden md:flex items-center gap-1">
-            {[['#how-it-works', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing']].map(([href, label]) => (
+            {[['#how-it-works', 'How it works'], ['#features', 'Features'], ['#pricing', 'Pricing'], ['#contact', 'Get In Touch']].map(([href, label]) => (
               <a
                 key={href}
                 href={href}
@@ -1043,7 +1043,7 @@ export default function Landing() {
       </section>
 
       {/* ── Contact Us ── */}
-      <section className="py-16 px-4 sm:px-6 bg-surface-800/50">
+      <section id="contact" className="py-16 px-4 sm:px-6 bg-surface-800/50">
         <div className="max-w-4xl mx-auto">
           <motion.div
             className="text-center mb-12"
