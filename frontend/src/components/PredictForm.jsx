@@ -6,18 +6,20 @@ import { Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip'
 
 const EXAMPLE_SEQ = 'MKTAYIAKQRQISFVKSHFSRQLEERLGLIEVQAPLADQFALGDGAVGRFKVETEADVGVDSTDAIRRLAKEAGLDGVIADKNDVTIEDPGT'
 
-const SLIDER_CONFIG = [
-  { key: 'min_qed', label: 'Min QED Score', min: 0.1, max: 1.0, step: 0.05, default: 0.6, desc: 'Drug-likeness threshold (0–1). Higher = more drug-like.' },
-  { key: 'temperature', label: 'Generation Temperature', min: 0.1, max: 2.0, step: 0.05, default: 0.8, desc: 'Controls diversity. Higher = more creative molecules.' },
-  { key: 'min_smiles_len', label: 'Min SMILES Length', min: 10, max: 100, step: 1, default: 40, desc: 'Minimum molecule size.' },
-  { key: 'max_smiles_len', label: 'Max SMILES Length', min: 50, max: 200, step: 1, default: 100, desc: 'Maximum molecule size.' },
-  { key: 'num_leads', label: 'Number of Leads', min: 1, max: 300, step: 1, default: 10, desc: 'How many drug candidates to generate. Up to 10 leads cost 1 token.' },
-]
+function getSliderConfig(params) {
+  return [
+    { key: 'min_qed', label: 'Minimum QED (Oral Drug-Likeness)', min: 0.1, max: 1.0, step: 0.05, default: 0.6, desc: 'Quantitative Estimate of Drug-likeness (QED) measures how suitable a molecule is for oral formulation based on weight, polarity, and lipophilicity. Set this to 0.50 - 0.60 for standard small molecules to balance target affinity with oral bioavailability. For larger targets like PROTACs or macrocycles, lower the threshold to 0.20 - 0.40 to prevent valid but heavier compounds from being falsely rejected by the system.' },
+    { key: 'temperature', label: 'Structural Creativity (Temperature)', min: 0.1, max: 2.0, step: 0.05, default: 0.8, desc: 'Temperature controls the structural diversity and novelty of the generated molecules. Lower values (0.10 - 0.50) produce highly stable chemistry but yield unoriginal structures very similar to known drugs. A balanced value (0.80 - 0.90) is optimal for generating novel, patentable scaffolds with realistic chemical valences. Higher values (1.0 - 1.5) maximize structural diversity to bypass existing patents, but will result in a higher rate of chemically invalid structures that fail sanitization.' },
+    { key: 'min_smiles_len', label: 'Min SMILES Length', min: 1, max: 100, step: 1, default: 40, desc: 'Minimum molecule size.' },
+    { key: 'max_smiles_len', label: 'Max SMILES Length', min: Math.max(params?.min_smiles_len + 1 || 41, 2), max: 100, step: 1, default: 100, desc: 'Maximum molecule size.' },
+    { key: 'num_leads', label: 'Number of Leads', min: 1, max: 300, step: 1, default: 10, desc: 'How many drug candidates to generate. Up to 10 leads cost 1 token.' },
+  ]
+}
 
 export default function PredictForm({ onResult, onTokensExhausted, userTokens, userPlan = 'free', onClearResult, onUpgrade }) {
   const [sequence, setSequence] = useState('')
   const [params, setParams] = useState(
-    Object.fromEntries(SLIDER_CONFIG.map((s) => [s.key, s.default]))
+    Object.fromEntries(getSliderConfig().map((s) => [s.key, s.default]))
   )
   const [loading, setLoading] = useState(false)
   const [progress, setProgress] = useState('')
@@ -46,13 +48,20 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
     }
   }, [activeTooltip])
 
+  // Adjust max_smiles_len when min_smiles_len changes
+  useEffect(() => {
+    if (params.max_smiles_len <= params.min_smiles_len) {
+      setParams((p) => ({ ...p, max_smiles_len: Math.min(params.min_smiles_len + 1, 100) }))
+    }
+  }, [params.min_smiles_len, params.max_smiles_len])
+
   function setParam(key, val) {
     setParams((p) => ({ ...p, [key]: parseFloat(val) }))
   }
 
   function reset() {
     setSequence('')
-    setParams(Object.fromEntries(SLIDER_CONFIG.map((s) => [s.key, s.default])))
+    setParams(Object.fromEntries(getSliderConfig().map((s) => [s.key, s.default])))
     onClearResult?.()
   }
 
@@ -174,7 +183,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         {/* Row 2: Min QED Score + Generation Temperature */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {['min_qed', 'temperature'].map((key) => {
-            const s = SLIDER_CONFIG.find((c) => c.key === key)
+            const s = getSliderConfig(params).find((c) => c.key === key)
             return (
               <SliderField
                 key={s.key}
@@ -191,7 +200,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
         {/* Row 3: Min SMILES Length + Max SMILES Length */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {['min_smiles_len', 'max_smiles_len'].map((key) => {
-            const s = SLIDER_CONFIG.find((c) => c.key === key)
+            const s = getSliderConfig(params).find((c) => c.key === key)
             return (
               <SliderField
                 key={s.key}
@@ -207,7 +216,7 @@ export default function PredictForm({ onResult, onTokensExhausted, userTokens, u
 
         {/* Row 4: Number of Leads counter */}
         {(() => {
-          const s = SLIDER_CONFIG.find((c) => c.key === 'num_leads')
+          const s = getSliderConfig(params).find((c) => c.key === 'num_leads')
           return (
             <CounterField
               config={s}

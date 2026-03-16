@@ -11,6 +11,126 @@ import {
   CheckCircle2, Star, BarChart3, Target, ChevronDown, Menu, X,
 } from 'lucide-react'
 
+// ─── Contact Form Component ──────────────────────────────────────────────────
+
+function ContactForm() {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    email: '',
+    phone: '',
+    message: ''
+  })
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const response = await fetch('https://formspree.io/f/mwvrrqaj', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(formData)
+      })
+
+      if (response.ok) {
+        toast.success('Message sent successfully! We\'ll get back to you soon.')
+        setFormData({ email: '', phone: '', message: '' })
+      } else {
+        throw new Error('Failed to send message')
+      }
+    } catch (error) {
+      toast.error('Failed to send message. Please try again or contact us directly.')
+      console.error('Form submission error:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+            Email Address *
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            required
+            className="w-full px-4 py-3 bg-surface-800 border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+            placeholder="your.email@example.com"
+          />
+        </div>
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-slate-300 mb-2">
+            Phone Number
+          </label>
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            className="w-full px-4 py-3 bg-surface-800 border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
+            placeholder="+91 98765 43210"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor="message" className="block text-sm font-medium text-slate-300 mb-2">
+          Message
+        </label>
+        <textarea
+          id="message"
+          name="message"
+          value={formData.message}
+          onChange={handleInputChange}
+          rows={4}
+          className="w-full px-4 py-3 bg-surface-800 border border-white/[0.08] rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all resize-none"
+          placeholder="Tell us about your research needs or any questions you have..."
+        />
+      </div>
+      <div className="text-center">
+        <button
+          type="submit"
+          disabled={loading}
+          className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 disabled:from-gray-600 disabled:to-gray-500 text-white font-semibold rounded-lg transition-all duration-200 transform hover:scale-105 disabled:hover:scale-100 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-surface-900 disabled:cursor-not-allowed"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Sending...
+            </>
+          ) : (
+            <>
+              Send Message
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              </svg>
+            </>
+          )}
+        </button>
+      </div>
+    </form>
+  )
+}
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const FEATURES = [
@@ -501,25 +621,7 @@ export default function Landing() {
                   <ChevronDown size={18} />
                 </a>
               </motion.div>
-
-              {/* Trust indicators */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.7 }}
-                className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-500"
-              >
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand-500" /> No credit card required
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand-500" /> 10 free tokens on signup (each token = 10 leads)
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-brand-500" /> AES-256 encrypted
-                </span>
-              </motion.div>
-            </div>
+              </div>
 
             {/* Right — App dashboard preview */}
             <motion.div
@@ -940,6 +1042,37 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Contact Us ── */}
+      <section className="py-16 px-4 sm:px-6 bg-surface-800/50">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            className="text-center mb-12"
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Get in <span className="text-gradient">Touch</span>
+            </h2>
+            <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+              Have questions about PharmForge AI? We'd love to hear from you.
+              Send us a message and we'll respond as soon as possible.
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="bg-surface-900/50 backdrop-blur-sm border border-white/[0.04] rounded-2xl p-8"
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+          >
+            <ContactForm />
+          </motion.div>
+        </div>
+      </section>
+
       {/* ── Footer ── */}
       <footer className="border-t border-white/[0.04] py-10 sm:py-12 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto">
@@ -968,10 +1101,10 @@ export default function Landing() {
             <div>
               <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-4">Legal</div>
               <ul className="space-y-2.5 text-sm text-slate-500">
-                <li><a href="#" className="hover:text-slate-300 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-slate-300 transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-slate-300 transition-colors">Data Consent</a></li>
-                <li><a href="#" className="hover:text-slate-300 transition-colors">Cookie Policy</a></li>
+                <li><Link to="/privacy-policy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/terms-of-service" className="hover:text-slate-300 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/data-consent" className="hover:text-slate-300 transition-colors">Data Consent</Link></li>
+                <li><Link to="/cookie-policy" className="hover:text-slate-300 transition-colors">Cookie Policy</Link></li>
               </ul>
             </div>
           </div>

@@ -5,6 +5,10 @@ import Landing from './pages/Landing'
 import AuthPage from './pages/AuthPage'
 import DashboardPage from './pages/DashboardPage'
 import AdminPage from './pages/AdminPage'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import DataConsent from './pages/DataConsent'
+import CookiePolicy from './pages/CookiePolicy'
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth()
@@ -45,6 +49,10 @@ export default function App() {
           path="/admin"
           element={<AdminRoute><AdminPage /></AdminRoute>}
         />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-service" element={<TermsOfService />} />
+        <Route path="/data-consent" element={<DataConsent />} />
+        <Route path="/cookie-policy" element={<CookiePolicy />} />
         <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
